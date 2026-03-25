@@ -49,6 +49,10 @@
                         <a class="nav-link" href="/admin/categorias">Categorías</a>
                     </li>
 
+                    </li class="nav-item">
+                        <a class="nav-link" href="/admin/subcategorias">Subcategorias</a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link" href="/tickets">Tickets</a>
                     </li>

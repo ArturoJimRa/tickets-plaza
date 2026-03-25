@@ -5,9 +5,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\CategoriaTicketController;
+use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\UnidadController;
+
 
 Route::get('/', function () {
     return redirect('/login');
@@ -75,6 +77,18 @@ Route::middleware(['web'])->group(function () {
     Route::get('/admin/categorias', [CategoriaTicketController::class, 'index']);
     Route::get('/admin/categorias/create', [CategoriaTicketController::class, 'create']);
     Route::post('/admin/categorias', [CategoriaTicketController::class, 'store']);
+
+    // SUBCATEGORÍAS (SOLO ADMIN)
+    Route::get('/admin/subcategorias', [SubcategoriaController::class, 'index'])
+    ->middleware(['authcheck', 'role:Admin']);
+
+    Route::get('/admin/subcategorias/create', [SubcategoriaController::class, 'create'])
+    ->middleware(['authcheck', 'role:Admin']);
+
+    Route::post('/admin/subcategorias', [SubcategoriaController::class, 'store'])
+    ->middleware(['authcheck', 'role:Admin']);
+    
+    Route::get('/admin/subcategorias/{categoria}', [SubcategoriaController::class, 'getByCategoria']);
 
     // ROLES
     Route::get('/admin/roles', [RolController::class, 'index']);

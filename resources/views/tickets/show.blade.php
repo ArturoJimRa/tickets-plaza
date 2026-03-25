@@ -77,6 +77,65 @@
             </div>
         </div>
 
+        {{-- ===============================
+           🔥 SLA INFO (NUEVO)
+        =============================== --}}
+        @if($ticket->sla_horas)
+        <hr>
+
+        <h6 class="fw-bold">⏱ Información del SLA</h6>
+
+        <div class="row">
+
+            {{-- PRIORIDAD --}}
+            <div class="col-md-3">
+                <strong>Prioridad:</strong><br>
+                <span class="badge 
+                    @if($ticket->prioridad == 'critico') bg-danger
+                    @elseif($ticket->prioridad == 'alto') bg-warning
+                    @elseif($ticket->prioridad == 'medio') bg-primary
+                    @else bg-secondary
+                    @endif">
+                    {{ ucfirst($ticket->prioridad) }}
+                </span>
+            </div>
+
+            {{-- SLA HORAS --}}
+            <div class="col-md-3">
+                <strong>SLA:</strong><br>
+                {{ $ticket->sla_horas }} horas
+            </div>
+
+            {{-- FECHA LÍMITE --}}
+            <div class="col-md-3">
+                <strong>Fecha límite:</strong><br>
+                {{ $ticket->fecha_limite ?? 'Sin definir' }}
+            </div>
+
+            {{-- TIEMPO RESTANTE --}}
+            <div class="col-md-3">
+                <strong>Tiempo restante:</strong><br>
+
+                @if($ticket->fecha_limite)
+                    @php
+                        $ahora = \Carbon\Carbon::now();
+                        $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
+                        $diff = $ahora->diff($limite);
+
+                        $horas = ($diff->days * 24) + $diff->h;
+                        $minutos = $diff->i;
+                    @endphp
+
+                    {{ $horas }}h {{ $minutos }}m
+                @else
+                    N/A
+                @endif
+
+            </div>
+
+        </div>
+        @endif
+
         @if($ticket->estado === 'Cerrado')
         <div class="alert alert-secondary mt-3">
             <strong>📄 Ticket cerrado</strong><br>
@@ -121,6 +180,22 @@
                     @endforeach
                 </select>
             </div>
+
+        <div class="mb-3">
+    <label>Prioridad</label>
+    <select name="prioridad" class="form-select" required>
+        <option value="">Seleccione</option>
+        <option value="critico">🔴 Crítico</option>
+        <option value="alto">🟠 Alto</option>
+        <option value="medio">🟡 Medio</option>
+        <option value="bajo">🟢 Bajo</option>
+    </select>
+    </div>
+
+    <div class="mb-3">
+    <label>Tiempo de solución (horas)</label>
+    <input type="number" name="sla_horas" class="form-control" min="1" required>
+    </div>
 
             <button class="btn btn-primary">Asignar</button>
         </form>

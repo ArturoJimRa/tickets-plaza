@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
 {
-    public function index()
+public function index()
 {
     $rol       = session('rol');
     $rolId     = session('rol_id');
@@ -21,6 +21,11 @@ class TicketController extends Controller
         ->select(
             'tickets.id',
             'tickets.titulo',
+
+            // 🔥 AGREGADO (NO AFECTA NADA)
+            'tickets.prioridad',
+            'tickets.fecha_limite',
+
             'unidades.nombre as unidad',
             'categorias_ticket.nombre as categoria',
             DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
@@ -53,6 +58,24 @@ class TicketController extends Controller
               });
     }
 
+    /*
+    ===============================
+    🔎 FILTRO GENERAL
+    ===============================
+    */
+
+    if (request()->filled('buscar')) {
+        $buscar = request('buscar');
+
+        $query->where(function($q) use ($buscar) {
+            $q->where('tickets.titulo', 'like', "%{$buscar}%")
+              ->orWhere('tickets.id', $buscar)
+              ->orWhere('unidades.nombre', 'like', "%{$buscar}%")
+              ->orWhere('categorias_ticket.nombre', 'like', "%{$buscar}%")
+              ->orWhere('tickets.prioridad', 'like', "%{$buscar}%");
+        });
+    }
+
     $tickets = $query
         ->orderBy('tickets.fecha_creacion', 'desc')
         ->get();
@@ -63,30 +86,35 @@ class TicketController extends Controller
     /* ===============================
        MIS TICKETS (ASIGNADOS A MÍ)
     =============================== */
-    public function misTickets()
-    {
-        if (session('rol') === 'Unidad') abort(403);
+   public function misTickets()
+{
+    if (session('rol') === 'Unidad') abort(403);
 
-        $usuarioId = session('usuario_id');
+    $usuarioId = session('usuario_id');
 
-        $tickets = DB::table('tickets')
-            ->join('unidades', 'tickets.unidad_id', '=', 'unidades.id')
-            ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
-            ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
-            ->where('tickets.asignado_a', $usuarioId)
-            ->select(
-                'tickets.id',
-                'tickets.titulo',
-                'unidades.nombre as unidad',
-                'categorias_ticket.nombre as categoria',
-                DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
-                'tickets.fecha_creacion'
-            )
-            ->orderBy('tickets.fecha_creacion', 'desc')
-            ->get();
+    $tickets = DB::table('tickets')
+        ->join('unidades', 'tickets.unidad_id', '=', 'unidades.id')
+        ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
+        ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
+        ->where('tickets.asignado_a', $usuarioId)
+        ->select(
+            'tickets.id',
+            'tickets.titulo',
 
-        return view('tickets.mis_tickets', compact('tickets'));
-    }
+            // 🔥 AGREGADO
+            'tickets.prioridad',
+            'tickets.fecha_limite',
+
+            'unidades.nombre as unidad',
+            'categorias_ticket.nombre as categoria',
+            DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
+            'tickets.fecha_creacion'
+        )
+        ->orderBy('tickets.fecha_creacion', 'desc')
+        ->get();
+
+    return view('tickets.mis_tickets', compact('tickets'));
+}
 
     /* ===============================
        DETALLE DEL TICKET
@@ -144,32 +172,45 @@ class TicketController extends Controller
     ));
 }
 
-    /* ===============================
-       ASIGNAR TICKET (POR ÁREA)
+    /* =============================== 
+    ASIGNAR TICKET (POR ÁREA) + SLA
     =============================== */
-    public function asignar(Request $request, $id)
-    {
-        $ticket = DB::table('tickets')->where('id', $id)->first();
-        if (!$ticket) abort(404);
+public function asignar(Request $request, $id)
+{
+    $ticket = DB::table('tickets')->where('id', $id)->first();
+    if (!$ticket) abort(404);
 
-        if (
-            session('rol') !== 'Admin' &&
-            $ticket->rol_destino_id != session('rol_id')
-        ) {
-            abort(403);
-        }
-
-        $request->validate([
-            'asignado_a' => 'required|exists:usuarios,id'
-        ]);
-
-        DB::table('tickets')->where('id', $id)->update([
-            'asignado_a'       => $request->asignado_a,
-            'estado_ticket_id' => 2
-        ]);
-
-        return back()->with('success', 'Ticket asignado correctamente');
+    // Validar acceso
+    if (
+        session('rol') !== 'Admin' &&
+        $ticket->rol_destino_id != session('rol_id')
+    ) {
+        abort(403);
     }
+
+    // VALIDACIÓN
+    $request->validate([
+        'asignado_a' => 'required|exists:usuarios,id',
+        'prioridad'  => 'required|in:critico,alto,medio,bajo',
+        'sla_horas'  => 'required|integer|min:1'
+    ]);
+
+    // CALCULAR FECHAS
+    $fechaAsignacion = now();
+    $fechaLimite = now()->addHours((int) $request->sla_horas);
+
+    // ACTUALIZAR TICKET
+    DB::table('tickets')->where('id', $id)->update([
+        'asignado_a'       => $request->asignado_a,
+        'estado_ticket_id' => 2, // Asignado
+        'prioridad'        => $request->prioridad,
+        'sla_horas'        => $request->sla_horas,
+        'fecha_asignacion' => $fechaAsignacion,
+        'fecha_limite'     => $fechaLimite
+    ]);
+
+    return back()->with('success', 'Ticket asignado con SLA correctamente');
+}
 
     /* ===============================
        RESPONDER TICKET (POR ÁREA)
@@ -236,6 +277,7 @@ public function store(Request $request)
         'titulo'           => $request->titulo,
         'descripcion'      => $request->descripcion,
         'categoria_id'     => $categoria->id,
+        'subcategoria_id' => $request->subcategoria_id,
         'rol_destino_id'   => $categoria->rol_destino_id,
         'estado_ticket_id' => 1,
         'unidad_id'        => $usuario->unidad_id ?? null,

@@ -4,6 +4,10 @@
 
 @section('content')
 
+@php
+    \Carbon\Carbon::setLocale('es');
+@endphp
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">🎫 Lista de Tickets</h4>
 
@@ -13,6 +17,16 @@
         </a>
     @endif
 </div>
+
+{{-- 🔎 FILTRO --}}
+<form method="GET" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="buscar" class="form-control"
+               placeholder="Buscar por ID, título, unidad, categoría o prioridad..."
+               value="{{ request('buscar') }}">
+        <button class="btn btn-dark">Buscar</button>
+    </div>
+</form>
 
 @if(session('success'))
     <div class="alert alert-success">
@@ -31,6 +45,8 @@
                     <th>Unidad</th>
                     <th>Categoría</th>
                     <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Tiempo restante</th>
                     <th>Fecha</th>
                     <th class="text-end">Acción</th>
                 </tr>
@@ -53,43 +69,98 @@
                             </span>
                         </td>
 
+                        {{-- ESTADO --}}
                         <td>
-    @switch($ticket->estado)
-        @case('Abierto')
-            <span class="badge bg-warning text-dark">Abierto</span>
-            @break
+                            @switch($ticket->estado)
+                                @case('Abierto')
+                                    <span class="badge bg-warning text-dark">Abierto</span>
+                                    @break
+                                @case('En proceso')
+                                    <span class="badge bg-info text-dark">En proceso</span>
+                                    @break
+                                @case('Resuelto')
+                                    <span class="badge bg-primary">Resuelto</span>
+                                    @break
+                                @case('Cerrado')
+                                    <span class="badge bg-success">Cerrado</span>
+                                    @break
+                                @default
+                                    <span class="badge bg-secondary">Desconocido</span>
+                            @endswitch
+                        </td>
 
-        @case('En proceso')
-            <span class="badge bg-info text-dark">En proceso</span>
-            @break
+                        {{-- PRIORIDAD --}}
+                        <td>
+                            @if($ticket->prioridad)
+                                @switch($ticket->prioridad)
+                                    @case('critico')
+                                        <span class="badge bg-danger">Crítico</span>
+                                        @break
+                                    @case('alto')
+                                        <span class="badge bg-warning text-dark">Alto</span>
+                                        @break
+                                    @case('medio')
+                                        <span class="badge bg-info text-dark">Medio</span>
+                                        @break
+                                    @case('bajo')
+                                        <span class="badge bg-secondary">Bajo</span>
+                                        @break
+                                @endswitch
+                            @else
+                                <span class="text-muted">Sin prioridad</span>
+                            @endif
+                        </td>
 
-        @case('Resuelto')
-            <span class="badge bg-primary">Resuelto</span>
-            @break
+                        {{-- 🚦 TIEMPO RESTANTE EN ESPAÑOL --}}
+                        <td>
+                            @if($ticket->fecha_limite)
 
-        @case('Cerrado')
-            <span class="badge bg-success">Cerrado</span>
-            @break
+                                @php
+                                    $ahora = \Carbon\Carbon::now();
+                                    $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
+                                    $minutos = $ahora->diffInMinutes($limite, false);
+                                @endphp
 
-        @default
-            <span class="badge bg-secondary">Desconocido</span>
-    @endswitch
-</td>
+                                {{-- 🔴 VENCIDO --}}
+                                @if($minutos < 0)
+                                    <span class="badge bg-danger">
+                                        Vencido
+                                    </span>
 
+                                {{-- 🟡 POR VENCER --}}
+                                @elseif($minutos <= 120)
+                                    <span class="badge bg-warning text-dark">
+                                        {{ $limite->diffForHumans(null, true, false, 2) }}
+                                    </span>
 
+                                {{-- 🟢 EN TIEMPO --}}
+                                @else
+                                    <span class="badge bg-success">
+                                        {{ $limite->diffForHumans(null, true, false, 2) }}
+                                    </span>
+                                @endif
+
+                            @else
+                                <span class="text-muted">Sin SLA</span>
+                            @endif
+                        </td>
+
+                        {{-- FECHA --}}
                         <td>
                             {{ \Carbon\Carbon::parse($ticket->fecha_creacion)->format('d/m/Y') }}
                         </td>
 
+                        {{-- ACCIÓN --}}
                         <td class="text-end">
                             <a href="/tickets/{{ $ticket->id }}" class="btn btn-sm btn-outline-primary">
                                 Ver detalle
                             </a>
                         </td>
                     </tr>
+
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
+                        <td colspan="9" class="text-center py-4 text-muted">
                             No hay tickets registrados
                         </td>
                     </tr>

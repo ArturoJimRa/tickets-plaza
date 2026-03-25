@@ -65,6 +65,13 @@
                         </select>
                     </div>
 
+                    <div class="mb-3" id="contenedor-subcategoria" style="display: none;">
+                        <label class="form-label">Subcategoría</label>
+                        <select name="subcategoria_id" id="subcategoria" class="form-select">
+                            <option value="">Seleccione una subcategoría</option>
+                        </select>
+                    </div>
+
                     <div class="d-flex justify-content-between">
                         <a href="/tickets" class="btn btn-secondary">
                             ⬅ Volver
@@ -84,3 +91,60 @@
 </div>
 
 @endsection
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const categoriaSelect = document.querySelector('select[name="categoria_id"]');
+    const subcategoriaSelect = document.getElementById('subcategoria');
+    const contenedor = document.getElementById('contenedor-subcategoria');
+
+    categoriaSelect.addEventListener('change', function () {
+
+        const categoriaId = this.value;
+
+        // 🔴 Si no hay categoría seleccionada
+        if (!categoriaId) {
+            contenedor.style.display = 'none';
+            subcategoriaSelect.innerHTML = '<option value="">Seleccione una subcategoría</option>';
+            return;
+        }
+
+        // Mostrar mientras carga
+        contenedor.style.display = 'block';
+        subcategoriaSelect.innerHTML = '<option value="">Cargando...</option>';
+
+        fetch(`/admin/subcategorias/${categoriaId}`)
+            .then(response => response.json())
+            .then(data => {
+
+                // 🔴 Si NO hay subcategorías
+                if (data.length === 0) {
+                    contenedor.style.display = 'none';
+                    subcategoriaSelect.innerHTML = '<option value="">Sin subcategorías</option>';
+                    return;
+                }
+
+                // 🟢 Si SÍ hay subcategorías
+                contenedor.style.display = 'block';
+                subcategoriaSelect.innerHTML = '<option value="">Seleccione una subcategoría</option>';
+
+                data.forEach(sub => {
+                    subcategoriaSelect.innerHTML += `
+                        <option value="${sub.id}">${sub.nombre}</option>
+                    `;
+                });
+
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                contenedor.style.display = 'none';
+                subcategoriaSelect.innerHTML = '<option value="">Error al cargar</option>';
+            });
+
+    });
+
+});
+</script>

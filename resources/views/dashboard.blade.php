@@ -71,9 +71,20 @@
             </div>
         </div>
 
+        {{-- SUBCATEGORÍAS --}}
+        <div class="col-md-4">
+            <div class="card bg-danger-subtle h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">📂 Subcategorías</h5>
+                    <p class="card-text">Subcategorías por categoria creada</p>
+                    <a href="/admin/subcategorias" class="btn btn-dark btn-sm">Gestionar</a>
+                </div>
+            </div>
+        </div>
+
         {{-- TICKETS --}}
         <div class="col-md-4">
-            <div class="card text-bg-success h-100 shadow-sm">
+            <div class="card text-bg-white h-100 shadow-sm">
                 <div class="card-body">
                     <h5 class="card-title">🎫 Tickets</h5>
                     <p class="card-text">Ver y supervisar todos los tickets</p>
