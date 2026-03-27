@@ -77,6 +77,11 @@ Route::middleware(['web'])->group(function () {
     Route::get('/admin/categorias', [CategoriaTicketController::class, 'index']);
     Route::get('/admin/categorias/create', [CategoriaTicketController::class, 'create']);
     Route::post('/admin/categorias', [CategoriaTicketController::class, 'store']);
+    // EDITAR CATEGORÍA
+    Route::get('/admin/categorias/{id}/edit', [CategoriaTicketController::class, 'edit']);
+    
+    // ACTUALIZAR CATEGORÍA
+    Route::put('/admin/categorias/{id}', [CategoriaTicketController::class, 'update']);
 
     // SUBCATEGORÍAS (SOLO ADMIN)
     Route::get('/admin/subcategorias', [SubcategoriaController::class, 'index'])
@@ -90,10 +95,24 @@ Route::middleware(['web'])->group(function () {
     
     Route::get('/admin/subcategorias/{categoria}', [SubcategoriaController::class, 'getByCategoria']);
 
+    // EDITAR SUBCATEGORÍA
+    Route::get('/admin/subcategorias/{id}/edit', [SubcategoriaController::class, 'edit']);
+
+    // ACTUALIZAR SUBCATEGORÍA
+    Route::put('/admin/subcategorias/{id}', [SubcategoriaController::class, 'update']);
+
+    Route::delete('/admin/categorias/{id}', [CategoriaTicketController::class, 'destroy']);
+
+
     // ROLES
     Route::get('/admin/roles', [RolController::class, 'index']);
     Route::get('/admin/roles/create', [RolController::class, 'create']);
     Route::post('/admin/roles', [RolController::class, 'store']);
+    // EDITAR ROL
+    Route::get('/admin/roles/{id}/edit', [RolController::class, 'edit']);
+
+    // ACTUALIZAR ROL
+    Route::put('/admin/roles/{id}', [RolController::class, 'update']);
 
     // MARCAS (SOLO ADMIN)
     Route::get('/admin/marcas', [MarcaController::class, 'index'])

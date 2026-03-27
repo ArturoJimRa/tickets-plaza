@@ -62,12 +62,14 @@
                                required>
                     </div>
 
+                    {{-- 🔥 ROL --}}
                     <div class="mb-3">
                         <label class="form-label">Rol</label>
-                        <select name="rol_id" class="form-select" required>
+                        <select name="rol_id" id="rolSelect" class="form-select" required>
                             <option value="">Seleccione rol</option>
                             @foreach(DB::table('roles')->get() as $rol)
                                 <option value="{{ $rol->id }}"
+                                        data-nombre="{{ $rol->nombre }}"
                                     {{ old('rol_id') == $rol->id ? 'selected' : '' }}>
                                     {{ $rol->nombre }}
                                 </option>
@@ -75,7 +77,8 @@
                         </select>
                     </div>
 
-                    <div class="mb-4">
+                    {{-- 🔥 CONTENEDOR UNIDAD (IMPORTANTE: ID) --}}
+                    <div class="mb-4" id="unidadContainer">
                         <label class="form-label">Unidad</label>
                         <select name="unidad_id" class="form-select">
                             <option value="">Sin unidad</option>
@@ -105,5 +108,31 @@
 
     </div>
 </div>
+
+{{-- 🔥 SCRIPT --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const rolSelect = document.getElementById('rolSelect');
+    const unidadContainer = document.getElementById('unidadContainer');
+
+    function toggleUnidad() {
+        const selectedOption = rolSelect.options[rolSelect.selectedIndex];
+        const rolNombre = selectedOption.getAttribute('data-nombre');
+
+        if (rolNombre === 'Unidad') {
+            unidadContainer.style.display = 'block';
+        } else {
+            unidadContainer.style.display = 'none';
+        }
+    }
+
+    // Ejecutar al cargar (por si viene old())
+    toggleUnidad();
+
+    // Ejecutar al cambiar
+    rolSelect.addEventListener('change', toggleUnidad);
+});
+</script>
 
 @endsection

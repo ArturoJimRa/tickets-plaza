@@ -61,6 +61,12 @@
         <div class="row">
             <div class="col-md-4"><strong>Unidad:</strong> {{ $ticket->unidad }}</div>
             <div class="col-md-4"><strong>Categoría:</strong> {{ $ticket->categoria }}</div>
+            @if($ticket->subcategoria)
+                <br>
+                <div class="cool-md-4"><strong>Subcategoria:</strong>
+                    {{ $ticket->subcategoria }}
+                </div>
+            @endif
             <div class="col-md-4"><strong>Creado por:</strong> {{ $ticket->creador }}</div>
         </div>
 
@@ -112,26 +118,48 @@
                 {{ $ticket->fecha_limite ?? 'Sin definir' }}
             </div>
 
-            {{-- TIEMPO RESTANTE --}}
-            <div class="col-md-3">
-                <strong>Tiempo restante:</strong><br>
+           {{-- TIEMPO RESTANTE --}}
+<div class="col-md-3">
+    <strong>Tiempo restante:</strong><br>
 
-                @if($ticket->fecha_limite)
-                    @php
-                        $ahora = \Carbon\Carbon::now();
-                        $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
-                        $diff = $ahora->diff($limite);
+    @if($ticket->fecha_limite)
 
-                        $horas = ($diff->days * 24) + $diff->h;
-                        $minutos = $diff->i;
-                    @endphp
+        @php
+            $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
+            $ahora = \Carbon\Carbon::now();
 
-                    {{ $horas }}h {{ $minutos }}m
-                @else
-                    N/A
-                @endif
+            // 🔥 detener contador si está cerrado
+            $referencia = $ticket->fecha_cierre
+                ? \Carbon\Carbon::parse($ticket->fecha_cierre)
+                : $ahora;
 
-            </div>
+            $diff = $referencia->diff($limite);
+
+            $horas = ($diff->days * 24) + $diff->h;
+            $minutos = $diff->i;
+
+            $minTotal = $referencia->diffInMinutes($limite, false);
+        @endphp
+
+        {{-- ✅ CERRADO --}}
+        @if($ticket->estado === 'Cerrado')
+
+            @if($minTotal < 0)
+                <span class="badge bg-danger">Fuera de tiempo</span>
+            @else
+                <span class="badge bg-success">Completado</span>
+            @endif
+
+        {{-- 🔄 ACTIVO --}}
+        @else
+            {{ $horas }}h {{ $minutos }}m
+        @endif
+
+    @else
+        N/A
+    @endif
+
+</div>
 
         </div>
         @endif
@@ -184,17 +212,13 @@
         <div class="mb-3">
     <label>Prioridad</label>
     <select name="prioridad" class="form-select" required>
+        {{ $ticket->estado_ticket_id == 2 ? 'disabled' : '' }}>
         <option value="">Seleccione</option>
         <option value="critico">🔴 Crítico</option>
         <option value="alto">🟠 Alto</option>
         <option value="medio">🟡 Medio</option>
         <option value="bajo">🟢 Bajo</option>
     </select>
-    </div>
-
-    <div class="mb-3">
-    <label>Tiempo de solución (horas)</label>
-    <input type="number" name="sla_horas" class="form-control" min="1" required>
     </div>
 
             <button class="btn btn-primary">Asignar</button>

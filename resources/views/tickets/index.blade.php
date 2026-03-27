@@ -112,38 +112,65 @@
                         </td>
 
                         {{-- 🚦 TIEMPO RESTANTE EN ESPAÑOL --}}
-                        <td>
-                            @if($ticket->fecha_limite)
+<td>
+    @if($ticket->fecha_limite)
 
-                                @php
-                                    $ahora = \Carbon\Carbon::now();
-                                    $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
-                                    $minutos = $ahora->diffInMinutes($limite, false);
-                                @endphp
+        @php
+            $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
+            $ahora = \Carbon\Carbon::now();
 
-                                {{-- 🔴 VENCIDO --}}
-                                @if($minutos < 0)
-                                    <span class="badge bg-danger">
-                                        Vencido
-                                    </span>
+            // Si está cerrado usamos fecha_cierre para congelar el tiempo
+            $referencia = $ticket->fecha_cierre 
+                ? \Carbon\Carbon::parse($ticket->fecha_cierre) 
+                : $ahora;
 
-                                {{-- 🟡 POR VENCER --}}
-                                @elseif($minutos <= 120)
-                                    <span class="badge bg-warning text-dark">
-                                        {{ $limite->diffForHumans(null, true, false, 2) }}
-                                    </span>
+            $minutos = $referencia->diffInMinutes($limite, false);
+        @endphp
 
-                                {{-- 🟢 EN TIEMPO --}}
-                                @else
-                                    <span class="badge bg-success">
-                                        {{ $limite->diffForHumans(null, true, false, 2) }}
-                                    </span>
-                                @endif
+        {{-- ✅ SI YA ESTÁ CERRADO --}}
+        @if($ticket->estado === 'Cerrado')
 
-                            @else
-                                <span class="text-muted">Sin SLA</span>
-                            @endif
-                        </td>
+            {{-- 🔴 FUERA DE TIEMPO --}}
+            @if($minutos < 0)
+                <span class="badge bg-danger">
+                    Fuera de tiempo
+                </span>
+
+            {{-- 🟢 COMPLETADO --}}
+            @else
+                <span class="badge bg-success">
+                    Completado
+                </span>
+            @endif
+
+        {{-- 🔄 SI AÚN ESTÁ ACTIVO --}}
+        @else
+
+            {{-- 🔴 VENCIDO --}}
+            @if($minutos < 0)
+                <span class="badge bg-danger">
+                    Vencido
+                </span>
+
+            {{-- 🟡 POR VENCER --}}
+            @elseif($minutos <= 120)
+                <span class="badge bg-warning text-dark">
+                    {{ $limite->diffForHumans(null, true, false, 2) }}
+                </span>
+
+            {{-- 🟢 EN TIEMPO --}}
+            @else
+                <span class="badge bg-success">
+                    {{ $limite->diffForHumans(null, true, false, 2) }}
+                </span>
+            @endif
+
+        @endif
+
+    @else
+        <span class="text-muted">Sin SLA</span>
+    @endif
+</td>
 
                         {{-- FECHA --}}
                         <td>

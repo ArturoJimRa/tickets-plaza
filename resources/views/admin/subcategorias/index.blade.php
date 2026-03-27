@@ -19,23 +19,37 @@
     @endif
 
     <div class="card shadow-sm">
-        <div class="card-body">
+        <div class="card-body p-0">
 
-            <table class="table table-bordered table-hover">
-                <thead class="table-light">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
                         <th>Nombre</th>
-                        <th>Categoría</th>
+                        <th>Categoría Relacionada</th>
+                        <th class="text-center">Acción</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     @forelse($subcategorias as $sub)
                         <tr>
-                            <td>{{ $sub->id }}</td>
                             <td>{{ $sub->nombre }}</td>
-                            <td>{{ $sub->categoria->nombre ?? 'Sin categoría' }}</td>
+
+                            <td>
+                                {{ $sub->categoria->nombre ?? 'Sin categoría' }}
+                            </td>
+
+                            <td class="text-center">
+
+                                {{-- EDITAR --}}
+                                <a href="/admin/subcategorias/{{ $sub->id }}/edit"
+                                   class="btn btn-sm btn-warning">
+                                    ✏️ Editar
+                                </a>
+
+                            </td>
                         </tr>
+
                     @empty
                         <tr>
                             <td colspan="3" class="text-center">

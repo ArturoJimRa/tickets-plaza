@@ -14,7 +14,7 @@
         <div class="card shadow-lg border-0">
 
             <div class="card-header bg-dark text-white text-center">
-                <h5 class="mb-0">Sistema de Tickets</h5>
+                <h5 class="mb-0">Sistema de Tickets ISCR</h5>
                 <small>Grupo Plaza</small>
             </div>
 

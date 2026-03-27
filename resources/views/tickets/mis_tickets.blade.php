@@ -8,9 +8,6 @@
     \Carbon\Carbon::setLocale('es');
 @endphp
 
-{{-- ===============================
-   ENCABEZADO
-=============================== --}}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">🎫 Mis tickets asignados</h4>
 
@@ -19,9 +16,6 @@
     </a>
 </div>
 
-{{-- ===============================
-   CONTENIDO
-=============================== --}}
 @if ($tickets->isEmpty())
 
     <div class="alert alert-info">
@@ -42,7 +36,7 @@
                         <th>Categoría</th>
                         <th>Estado</th>
                         <th>Prioridad</th>
-                        <th>Tiempo restante</th>
+                        <th>Tiempo/SLA</th>
                         <th>Fecha</th>
                         <th class="text-center">Acción</th>
                     </tr>
@@ -53,9 +47,7 @@
                     <tr>
                         <td>{{ $t->id }}</td>
 
-                        <td>
-                            <strong>{{ $t->titulo }}</strong>
-                        </td>
+                        <td><strong>{{ $t->titulo }}</strong></td>
 
                         <td>{{ $t->unidad }}</td>
 
@@ -100,33 +92,48 @@
                             @endif
                         </td>
 
-                        {{-- 🚦 SLA --}}
+                        {{-- 🚦 SLA INTELIGENTE --}}
                         <td>
                             @if($t->fecha_limite)
 
                                 @php
-                                    $ahora = \Carbon\Carbon::now();
                                     $limite = \Carbon\Carbon::parse($t->fecha_limite);
-                                    $minutos = $ahora->diffInMinutes($limite, false);
+                                    $ahora = \Carbon\Carbon::now();
+
+                                    // 🔥 detener contador si está cerrado
+                                    $referencia = $t->fecha_cierre
+                                        ? \Carbon\Carbon::parse($t->fecha_cierre)
+                                        : $ahora;
+
+                                    $minutos = $referencia->diffInMinutes($limite, false);
                                 @endphp
 
-                                {{-- 🔴 VENCIDO --}}
-                                @if($minutos < 0)
-                                    <span class="badge bg-danger">
-                                        Vencido
-                                    </span>
+                                {{-- ✅ CERRADO --}}
+                                @if($t->estado === 'Cerrado')
 
-                                {{-- 🟡 POR VENCER --}}
-                                @elseif($minutos <= 120)
-                                    <span class="badge bg-warning text-dark">
-                                        {{ $limite->diffForHumans(null, true, false, 2) }}
-                                    </span>
+                                    @if($minutos < 0)
+                                        <span class="badge bg-danger">Fuera de tiempo</span>
+                                    @else
+                                        <span class="badge bg-success">Completado</span>
+                                    @endif
 
-                                {{-- 🟢 EN TIEMPO --}}
+                                {{-- 🔄 ACTIVO --}}
                                 @else
-                                    <span class="badge bg-success">
-                                        {{ $limite->diffForHumans(null, true, false, 2) }}
-                                    </span>
+
+                                    @if($minutos < 0)
+                                        <span class="badge bg-danger">Vencido</span>
+
+                                    @elseif($minutos <= 120)
+                                        <span class="badge bg-warning text-dark">
+                                            {{ $limite->diffForHumans(null, true, false, 2) }}
+                                        </span>
+
+                                    @else
+                                        <span class="badge bg-success">
+                                            {{ $limite->diffForHumans(null, true, false, 2) }}
+                                        </span>
+                                    @endif
+
                                 @endif
 
                             @else
@@ -134,12 +141,10 @@
                             @endif
                         </td>
 
-                        {{-- FECHA --}}
                         <td>
                             {{ \Carbon\Carbon::parse($t->fecha_creacion)->format('d/m/Y H:i') }}
                         </td>
 
-                        {{-- ACCIÓN --}}
                         <td class="text-center">
                             <a href="/tickets/{{ $t->id }}" class="btn btn-sm btn-primary">
                                 Ver

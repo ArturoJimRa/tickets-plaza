@@ -121,7 +121,7 @@ public function update(Request $request, $id)
             'correo' => $request->correo,
             'rol_id' => $request->rol_id,
             'unidad_id' => $request->unidad_id,
-            'contrasena'=> $request->contrasena
+            'contrasena'=> Hash::make($request->contrasena)
         ]);
 
     return redirect('/usuarios')
