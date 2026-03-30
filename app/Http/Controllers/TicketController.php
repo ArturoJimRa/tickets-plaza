@@ -95,13 +95,12 @@ public function misTickets()
     $usuarioId = session('usuario_id');
 
     $tickets = DB::table('tickets')
-        ->join('unidades', 'tickets.unidad_id', '=', 'unidades.id')
-        ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
+        ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
+        ->leftJoin('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
         ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
         ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
         ->where('tickets.asignado_a', $usuarioId)
 
-        // 🔥🔥🔥 MODIFICADO: OCULTAR CERRADOS
         ->where(function($q){
             $q->whereNull('estados_ticket.nombre')
               ->orWhere('estados_ticket.nombre', '!=', 'Cerrado');
@@ -110,8 +109,6 @@ public function misTickets()
         ->select(
             'tickets.id',
             'tickets.titulo',
-
-            // 🔥 AGREGADO
             'tickets.prioridad',
             'tickets.fecha_limite',
             'tickets.fecha_cierre',

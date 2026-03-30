@@ -58,7 +58,7 @@
             </div>
 
             <div class="card-footer text-center text-muted small">
-                © {{ date('Y') }} Grupo Plaza
+                © {{ date('Y') }} Grupo Plaza   v4.1
             </div>
 
         </div>
