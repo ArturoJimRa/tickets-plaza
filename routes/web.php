@@ -186,6 +186,9 @@ Route::post('/tickets', [TicketController::class, 'store'])
 Route::get('/tickets', [TicketController::class, 'index'])
     ->middleware('authcheck');
 
+Route::get('/tickets/exportar', [TicketController::class, 'exportarExcel'])
+    ->middleware('authcheck');
+
 Route::get('/tickets/{id}', [TicketController::class, 'show'])
     ->middleware('authcheck');
 

@@ -111,66 +111,49 @@
                             @endif
                         </td>
 
-                        {{-- 🚦 TIEMPO RESTANTE EN ESPAÑOL --}}
-<td>
-    @if($ticket->fecha_limite)
+                        {{-- 🚦 TIEMPO RESTANTE --}}
+                        <td>
+                            @if($ticket->fecha_limite)
 
-        @php
-            $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
-            $ahora = \Carbon\Carbon::now();
+                                @php
+                                    $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
+                                    $ahora = \Carbon\Carbon::now();
 
-            // Si está cerrado usamos fecha_cierre para congelar el tiempo
-            $referencia = $ticket->fecha_cierre 
-                ? \Carbon\Carbon::parse($ticket->fecha_cierre) 
-                : $ahora;
+                                    $referencia = $ticket->fecha_cierre 
+                                        ? \Carbon\Carbon::parse($ticket->fecha_cierre) 
+                                        : $ahora;
 
-            $minutos = $referencia->diffInMinutes($limite, false);
-        @endphp
+                                    $minutos = $referencia->diffInMinutes($limite, false);
+                                @endphp
 
-        {{-- ✅ SI YA ESTÁ CERRADO --}}
-        @if($ticket->estado === 'Cerrado')
+                                @if($ticket->estado === 'Cerrado')
 
-            {{-- 🔴 FUERA DE TIEMPO --}}
-            @if($minutos < 0)
-                <span class="badge bg-danger">
-                    Fuera de tiempo
-                </span>
+                                    @if($minutos < 0)
+                                        <span class="badge bg-danger">Fuera de tiempo</span>
+                                    @else
+                                        <span class="badge bg-success">Completado</span>
+                                    @endif
 
-            {{-- 🟢 COMPLETADO --}}
-            @else
-                <span class="badge bg-success">
-                    Completado
-                </span>
-            @endif
+                                @else
 
-        {{-- 🔄 SI AÚN ESTÁ ACTIVO --}}
-        @else
+                                    @if($minutos < 0)
+                                        <span class="badge bg-danger">Vencido</span>
+                                    @elseif($minutos <= 120)
+                                        <span class="badge bg-warning text-dark">
+                                            {{ $limite->diffForHumans(null, true, false, 2) }}
+                                        </span>
+                                    @else
+                                        <span class="badge bg-success">
+                                            {{ $limite->diffForHumans(null, true, false, 2) }}
+                                        </span>
+                                    @endif
 
-            {{-- 🔴 VENCIDO --}}
-            @if($minutos < 0)
-                <span class="badge bg-danger">
-                    Vencido
-                </span>
+                                @endif
 
-            {{-- 🟡 POR VENCER --}}
-            @elseif($minutos <= 120)
-                <span class="badge bg-warning text-dark">
-                    {{ $limite->diffForHumans(null, true, false, 2) }}
-                </span>
-
-            {{-- 🟢 EN TIEMPO --}}
-            @else
-                <span class="badge bg-success">
-                    {{ $limite->diffForHumans(null, true, false, 2) }}
-                </span>
-            @endif
-
-        @endif
-
-    @else
-        <span class="text-muted">Sin SLA</span>
-    @endif
-</td>
+                            @else
+                                <span class="text-muted">Sin SLA</span>
+                            @endif
+                        </td>
 
                         {{-- FECHA --}}
                         <td>
@@ -198,5 +181,22 @@
 
     </div>
 </div>
+
+{{-- ===============================
+   🔥 BOTÓN FLOTANTE EXCEL
+=============================== --}}
+<a href="/tickets/exportar"
+   class="btn btn-success shadow-lg"
+   style="
+       position: fixed;
+       bottom: 25px;
+       right: 25px;
+       border-radius: 50px;
+       padding: 12px 18px;
+       z-index: 999;
+       font-weight: bold;
+   ">
+    📊 Exportar a Excel
+</a>
 
 @endsection

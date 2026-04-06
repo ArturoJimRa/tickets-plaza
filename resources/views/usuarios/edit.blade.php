@@ -39,11 +39,12 @@
                 <div class="mb-3">
                     <label class="form-label">Rol</label>
 
-                    <select name="rol_id" class="form-select" required>
+                    <select name="rol_id" id="rolSelect" class="form-select" required>
 
                         @foreach($roles as $rol)
 
                         <option value="{{ $rol->id }}"
+                            data-nombre="{{ $rol->nombre }}"
                             {{ $usuario->rol_id == $rol->id ? 'selected' : '' }}>
 
                             {{ $rol->nombre }}
@@ -55,8 +56,23 @@
                     </select>
                 </div>
 
+                {{-- 🔥 JEFE --}}
+                <div class="mb-3" id="jefeContainer">
+                    <div class="form-check">
+                        <input class="form-check-input"
+                            type="checkbox"
+                            name="es_jefe"
+                            value="1"
+                            id="esJefeCheck"
+                            {{ $usuario->es_jefe ? 'checked' : '' }}>
+                        <label class="form-check-label" for="esJefeCheck">
+                            ¿Es jefe de área?
+                        </label>
+                    </div>
+                </div>
+
                 {{-- UNIDAD --}}
-                <div class="mb-3">
+                <div class="mb-3" id="unidadContainer">
                     <label class="form-label">Unidad</label>
 
                     <select name="unidad_id" class="form-select">
@@ -78,21 +94,21 @@
                 </div>
 
                 {{-- CONTRASEÑA NUEVA --}}
-<div class="mb-3">
-    <label class="form-label">Nueva contraseña</label>
-    <input type="password"
-        name="contrasena"
-        class="form-control"
-        placeholder="Dejar vacío si no se desea cambiar">
-</div>
+                <div class="mb-3">
+                    <label class="form-label">Nueva contraseña</label>
+                    <input type="password"
+                        name="contrasena"
+                        class="form-control"
+                        placeholder="Dejar vacío si no se desea cambiar">
+                </div>
 
-{{-- CONFIRMAR CONTRASEÑA --}}
-<div class="mb-3">
-    <label class="form-label">Confirmar contraseña</label>
-    <input type="password"
-        name="contrasena_confirmation"
-        class="form-control">
-</div>
+                {{-- CONFIRMAR CONTRASEÑA --}}
+                <div class="mb-3">
+                    <label class="form-label">Confirmar contraseña</label>
+                    <input type="password"
+                        name="contrasena_confirmation"
+                        class="form-control">
+                </div>
 
                 <div class="d-flex justify-content-end gap-2">
 
@@ -112,5 +128,32 @@
     </div>
 
 </div>
+
+{{-- 🔥 SCRIPT --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const rolSelect = document.getElementById('rolSelect');
+    const unidadContainer = document.getElementById('unidadContainer');
+    const jefeContainer = document.getElementById('jefeContainer');
+
+    function toggleCampos() {
+        const selectedOption = rolSelect.options[rolSelect.selectedIndex];
+        const rolNombre = selectedOption.getAttribute('data-nombre');
+
+        // 🏢 Mostrar unidad solo si es "Unidad"
+        if (rolNombre === 'Unidad') {
+            unidadContainer.style.display = 'block';
+            jefeContainer.style.display = 'none';
+        } else {
+            unidadContainer.style.display = 'none';
+            jefeContainer.style.display = 'block';
+        }
+    }
+
+    toggleCampos();
+    rolSelect.addEventListener('change', toggleCampos);
+});
+</script>
 
 @endsection

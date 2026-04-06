@@ -77,7 +77,22 @@
                         </select>
                     </div>
 
-                    {{-- 🔥 CONTENEDOR UNIDAD (IMPORTANTE: ID) --}}
+                    {{-- 🔥 JEFE --}}
+                    <div class="mb-3" id="jefeContainer">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   name="es_jefe"
+                                   value="1"
+                                   id="esJefeCheck"
+                                   {{ old('es_jefe') ? 'checked' : '' }}>
+                            <label class="form-check-label" for="esJefeCheck">
+                                ¿Es jefe de área?
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- 🔥 UNIDAD --}}
                     <div class="mb-4" id="unidadContainer">
                         <label class="form-label">Unidad</label>
                         <select name="unidad_id" class="form-select">
@@ -115,23 +130,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const rolSelect = document.getElementById('rolSelect');
     const unidadContainer = document.getElementById('unidadContainer');
+    const jefeContainer = document.getElementById('jefeContainer');
 
-    function toggleUnidad() {
+    function toggleCampos() {
         const selectedOption = rolSelect.options[rolSelect.selectedIndex];
         const rolNombre = selectedOption.getAttribute('data-nombre');
 
+        // 🏢 Mostrar unidad solo si es "Unidad"
         if (rolNombre === 'Unidad') {
             unidadContainer.style.display = 'block';
+            jefeContainer.style.display = 'none'; // ❌ Unidad no tiene jefe
         } else {
             unidadContainer.style.display = 'none';
+            jefeContainer.style.display = 'block';
         }
     }
 
-    // Ejecutar al cargar (por si viene old())
-    toggleUnidad();
-
-    // Ejecutar al cambiar
-    rolSelect.addEventListener('change', toggleUnidad);
+    toggleCampos();
+    rolSelect.addEventListener('change', toggleCampos);
 });
 </script>
 

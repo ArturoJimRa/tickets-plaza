@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Exports\TicketsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TicketController extends Controller
 {
@@ -12,6 +14,7 @@ public function index()
     $rol       = session('rol');
     $rolId     = session('rol_id');
     $usuarioId = session('usuario_id');
+    $esJefe    = session('es_jefe'); // 🔥 NUEVO
 
     $query = DB::table('tickets')
         ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
@@ -22,8 +25,6 @@ public function index()
         ->select(
             'tickets.id',
             'tickets.titulo',
-
-            // 🔥 AGREGADO (NO AFECTA NADA)
             'tickets.prioridad',
             'tickets.fecha_limite',
             'tickets.fecha_cierre',
@@ -43,7 +44,7 @@ public function index()
 
     // 👨‍💼 ADMIN → VE TODO
     if ($rol === 'Admin') {
-        // No se aplica ningún filtro
+        // sin filtro
     }
 
     // 🏢 USUARIO DE UNIDAD → SOLO SUS TICKETS
@@ -51,7 +52,12 @@ public function index()
         $query->where('tickets.usuario_id', $usuarioId);
     }
 
-    // 🧑‍💻 ÁREA DESTINO → SOLO NO ASIGNADOS O CERRADOS
+    // 👑 JEFE → VE TODOS LOS TICKETS DE SU ÁREA
+    elseif ($esJefe) {
+        $query->where('tickets.rol_destino_id', $rolId);
+    }
+
+    // 🧑‍💻 USUARIO NORMAL DEL ÁREA
     else {
         $query->where('tickets.rol_destino_id', $rolId)
               ->where(function($q){
@@ -196,37 +202,54 @@ public function asignar(Request $request, $id)
         abort(403);
     }
 
-    if ($ticket->estado_ticket_id == 2 && $ticket->prioridad !== null) {
-        return back()->with('error', 'La prioridad no se puede modificar después de asignar el ticket');
+    $esAdmin = session('rol') === 'Admin';
+
+    /*
+    ===================================
+    🔥 VALIDACIÓN DINÁMICA
+    ===================================
+    */
+
+    if (!$ticket->sla_horas || $esAdmin) {
+        // 👉 Primera vez o ADMIN (puede cambiar prioridad)
+        $request->validate([
+            'asignado_a' => 'required|exists:usuarios,id',
+            'prioridad'  => 'required|in:critico,alto,medio,bajo'
+        ]);
+
+        $horas = 0;
+
+        switch ($request->prioridad) {
+            case 'critico': $horas = 24; break;
+            case 'alto':    $horas = 72; break;
+            case 'medio':   $horas = 168; break;
+            case 'bajo':    $horas = 360; break;
+        }
+
+        $fechaAsignacion = now();
+        $fechaLimite = now()->addHours($horas);
+
+        DB::table('tickets')->where('id', $id)->update([
+            'asignado_a'       => $request->asignado_a,
+            'estado_ticket_id' => 2,
+            'prioridad'        => $request->prioridad,
+            'sla_horas'        => $horas,
+            'fecha_asignacion' => $fechaAsignacion,
+            'fecha_limite'     => $fechaLimite
+        ]);
+
+    } else {
+        // 👉 Usuario normal: SOLO reasignar
+        $request->validate([
+            'asignado_a' => 'required|exists:usuarios,id'
+        ]);
+
+        DB::table('tickets')->where('id', $id)->update([
+            'asignado_a' => $request->asignado_a
+        ]);
     }
 
-    $request->validate([
-        'asignado_a' => 'required|exists:usuarios,id',
-        'prioridad'  => 'required|in:critico,alto,medio,bajo'
-    ]);
-
-    $horas = 0;
-
-    switch ($request->prioridad) {
-        case 'critico': $horas = 24; break;
-        case 'alto':    $horas = 72; break;
-        case 'medio':   $horas = 168; break;
-        case 'bajo':    $horas = 360; break;
-    }
-
-    $fechaAsignacion = now();
-    $fechaLimite = now()->addHours($horas);
-
-    DB::table('tickets')->where('id', $id)->update([
-        'asignado_a'       => $request->asignado_a,
-        'estado_ticket_id' => 2,
-        'prioridad'        => $request->prioridad,
-        'sla_horas'        => $horas,
-        'fecha_asignacion' => $fechaAsignacion,
-        'fecha_limite'     => $fechaLimite
-    ]);
-
-    return back()->with('success', 'Ticket asignado con SLA automático');
+    return back()->with('success', 'Ticket actualizado correctamente');
 }
 
     /* ===============================
@@ -332,5 +355,9 @@ public function cerrar($id)
     ]);
 
     return back()->with('success', 'Ticket cerrado correctamente');
+}
+public function exportarExcel()
+{
+    return Excel::download(new TicketsExport, 'reporte_tickets.xlsx');
 }
 }

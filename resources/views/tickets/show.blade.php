@@ -62,8 +62,7 @@
             <div class="col-md-4"><strong>Unidad:</strong> {{ $ticket->unidad }}</div>
             <div class="col-md-4"><strong>Categoría:</strong> {{ $ticket->categoria }}</div>
             @if($ticket->subcategoria)
-                <br>
-                <div class="cool-md-4"><strong>Subcategoria:</strong>
+                <div class="col-md-4"><strong>Subcategoria:</strong>
                     {{ $ticket->subcategoria }}
                 </div>
             @endif
@@ -83,17 +82,11 @@
             </div>
         </div>
 
-        {{-- ===============================
-           🔥 SLA INFO (NUEVO)
-        =============================== --}}
+        {{-- SLA --}}
         @if($ticket->sla_horas)
         <hr>
-
         <h6 class="fw-bold">⏱ Información del SLA</h6>
-
         <div class="row">
-
-            {{-- PRIORIDAD --}}
             <div class="col-md-3">
                 <strong>Prioridad:</strong><br>
                 <span class="badge 
@@ -106,72 +99,15 @@
                 </span>
             </div>
 
-            {{-- SLA HORAS --}}
             <div class="col-md-3">
                 <strong>SLA:</strong><br>
                 {{ $ticket->sla_horas }} horas
             </div>
 
-            {{-- FECHA LÍMITE --}}
             <div class="col-md-3">
                 <strong>Fecha límite:</strong><br>
                 {{ $ticket->fecha_limite ?? 'Sin definir' }}
             </div>
-
-           {{-- TIEMPO RESTANTE --}}
-<div class="col-md-3">
-    <strong>Tiempo restante:</strong><br>
-
-    @if($ticket->fecha_limite)
-
-        @php
-            $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
-            $ahora = \Carbon\Carbon::now();
-
-            // 🔥 detener contador si está cerrado
-            $referencia = $ticket->fecha_cierre
-                ? \Carbon\Carbon::parse($ticket->fecha_cierre)
-                : $ahora;
-
-            $diff = $referencia->diff($limite);
-
-            $horas = ($diff->days * 24) + $diff->h;
-            $minutos = $diff->i;
-
-            $minTotal = $referencia->diffInMinutes($limite, false);
-        @endphp
-
-        {{-- ✅ CERRADO --}}
-        @if($ticket->estado === 'Cerrado')
-
-            @if($minTotal < 0)
-                <span class="badge bg-danger">Fuera de tiempo</span>
-            @else
-                <span class="badge bg-success">Completado</span>
-            @endif
-
-        {{-- 🔄 ACTIVO --}}
-        @else
-            {{ $horas }}h {{ $minutos }}m
-        @endif
-
-    @else
-        N/A
-    @endif
-
-</div>
-
-        </div>
-        @endif
-
-        @if($ticket->estado === 'Cerrado')
-        <div class="alert alert-secondary mt-3">
-            <strong>📄 Ticket cerrado</strong><br>
-
-            <strong>Fecha de cierre:</strong> {{ $ticket->fecha_cierre }} <br>
-
-            <strong>Cerrado por:</strong>
-            {{ $ticket->cerrado_por_nombre }}
         </div>
         @endif
     </div>
@@ -197,6 +133,7 @@
         <form method="POST" action="/tickets/{{ $ticket->id }}/asignar">
             @csrf
 
+            {{-- USUARIO --}}
             <div class="mb-3">
                 <select name="asignado_a" class="form-select" required>
                     <option value="">Seleccione personal del área</option>
@@ -209,17 +146,23 @@
                 </select>
             </div>
 
-        <div class="mb-3">
-    <label>Prioridad</label>
-    <select name="prioridad" class="form-select" required>
-        {{ $ticket->estado_ticket_id == 2 ? 'disabled' : '' }}>
-        <option value="">Seleccione</option>
-        <option value="critico">🔴 Crítico</option>
-        <option value="alto">🟠 Alto</option>
-        <option value="medio">🟡 Medio</option>
-        <option value="bajo">🟢 Bajo</option>
-    </select>
-    </div>
+            {{-- PRIORIDAD (CORREGIDO) --}}
+            <div class="mb-3">
+                <label>Prioridad</label>
+                <select name="prioridad" class="form-select"
+                    @if($ticket->sla_horas && session('rol') !== 'Admin') disabled @endif>
+
+                    <option value="">Seleccione</option>
+                    <option value="critico">🔴 Crítico</option>
+                    <option value="alto">🟠 Alto</option>
+                    <option value="medio">🟡 Medio</option>
+                    <option value="bajo">🟢 Bajo</option>
+                </select>
+
+                @if($ticket->sla_horas)
+                    <small class="text-muted">La prioridad ya fue definida</small>
+                @endif
+            </div>
 
             <button class="btn btn-primary">Asignar</button>
         </form>

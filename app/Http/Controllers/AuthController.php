@@ -25,6 +25,7 @@ class AuthController extends Controller
                 'usuarios.contrasena',
                 'usuarios.estado',
                 'usuarios.rol_id',            // ✅ NECESARIO
+                'usuarios.es_jefe',
                 'roles.nombre as rol'
             )
             ->where('usuarios.correo', $request->correo)
@@ -54,6 +55,7 @@ class AuthController extends Controller
             'nombre'     => $usuario->nombre,
             'rol'        => $usuario->rol,     // Admin | Sistemas | Unidad | MKT | etc
             'rol_id'     => $usuario->rol_id,  // ✅ CLAVE PARA FILTRAR TICKETS
+            'es_jefe'    => $usuario->es_jefe,
         ]);
 
         // 7️⃣ Redirigir
