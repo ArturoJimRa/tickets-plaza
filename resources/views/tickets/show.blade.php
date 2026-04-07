@@ -146,7 +146,7 @@
                 </select>
             </div>
 
-            {{-- PRIORIDAD (CORREGIDO) --}}
+            {{-- PRIORIDAD --}}
             <div class="mb-3">
                 <label>Prioridad</label>
                 <select name="prioridad" class="form-select"
@@ -223,7 +223,10 @@
                 <label class="form-label">Cambiar estado</label>
                 <select name="estado_ticket_id" class="form-select" required>
                     @foreach ($estados as $estado)
-                        <option value="{{ $estado->id }}">{{ $estado->nombre }}</option>
+                        <option value="{{ $estado->id }}"
+                            {{ $ticket->estado === $estado->nombre ? 'selected' : '' }}>
+                            {{ $estado->nombre }}
+                        </option>
                     @endforeach
                 </select>
             </div>

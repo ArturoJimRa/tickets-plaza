@@ -18,13 +18,63 @@
     @endif
 </div>
 
-{{-- 🔎 FILTRO --}}
-<form method="GET" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="buscar" class="form-control"
-               placeholder="Buscar por ID, título, unidad, categoría o prioridad..."
-               value="{{ request('buscar') }}">
-        <button class="btn btn-dark">Buscar</button>
+{{-- 🔎 FILTROS COMPLETOS --}}
+<form method="GET" class="mb-4">
+    <div class="row g-2">
+
+        {{-- BUSCADOR --}}
+        <div class="col-md-3">
+            <input type="text" name="buscar" class="form-control"
+                   placeholder="Buscar..."
+                   value="{{ request('buscar') }}">
+        </div>
+
+        {{-- FECHA INICIO --}}
+        <div class="col-md-2">
+            <input type="date" name="fecha_inicio" class="form-control"
+                   value="{{ request('fecha_inicio') }}">
+        </div>
+
+        {{-- FECHA FIN --}}
+        <div class="col-md-2">
+            <input type="date" name="fecha_fin" class="form-control"
+                   value="{{ request('fecha_fin') }}">
+        </div>
+
+        {{-- ESTADO --}}
+        <div class="col-md-2">
+            <select name="estado" class="form-select">
+                <option value="">Estado</option>
+                <option value="1" {{ request('estado')=='1'?'selected':'' }}>Abierto</option>
+                <option value="2" {{ request('estado')=='2'?'selected':'' }}>En proceso</option>
+                <option value="3" {{ request('estado')=='3'?'selected':'' }}>Resuelto</option>
+                <option value="4" {{ request('estado')=='4'?'selected':'' }}>Cerrado</option>
+            </select>
+        </div>
+
+        {{-- PRIORIDAD --}}
+        <div class="col-md-2">
+            <select name="prioridad" class="form-select">
+                <option value="">Prioridad</option>
+                <option value="critico" {{ request('prioridad')=='critico'?'selected':'' }}>Crítico</option>
+                <option value="alto" {{ request('prioridad')=='alto'?'selected':'' }}>Alto</option>
+                <option value="medio" {{ request('prioridad')=='medio'?'selected':'' }}>Medio</option>
+                <option value="bajo" {{ request('prioridad')=='bajo'?'selected':'' }}>Bajo</option>
+            </select>
+        </div>
+
+        {{-- BOTONES --}}
+        <div class="col-md-1 d-grid">
+            <button class="btn btn-dark">Buscar</button>
+        </div>
+
+    </div>
+
+    {{-- LIMPIAR --}}
+    <div class="mt-2">
+        <a href="/tickets" class="btn btn-outline-secondary btn-sm">
+            Limpiar filtros
+        </a>
     </div>
 </form>
 
@@ -43,7 +93,12 @@
                     <th>ID</th>
                     <th>Título</th>
                     <th>Unidad</th>
+
+                    {{-- 🔥 NUEVO --}}
+                    <th>Área</th>
+
                     <th>Categoría</th>
+                    <th>Atendiendo</th>
                     <th>Estado</th>
                     <th>Prioridad</th>
                     <th>Tiempo restante</th>
@@ -63,10 +118,32 @@
 
                         <td>{{ $ticket->unidad }}</td>
 
+                        {{-- 🔥 NUEVO --}}
+                        <td>
+                            @if($ticket->area)
+                                <span class="badge bg-dark">
+                                    {{ $ticket->area }}
+                                </span>
+                            @else
+                                <span class="text-muted">Sin área</span>
+                            @endif
+                        </td>
+
                         <td>
                             <span class="badge bg-secondary">
                                 {{ $ticket->categoria }}
                             </span>
+                        </td>
+
+                        {{-- QUIÉN ATIENDE --}}
+                        <td>
+                            @if($ticket->asignado_a)
+                                <span class="badge bg-primary">
+                                    {{ $ticket->asignado_a }}
+                                </span>
+                            @else
+                                <span class="text-muted">Sin asignar</span>
+                            @endif
                         </td>
 
                         {{-- ESTADO --}}
@@ -85,7 +162,7 @@
                                     <span class="badge bg-success">Cerrado</span>
                                     @break
                                 @default
-                                    <span class="badge bg-secondary">Desconocido</span>
+                                    <span class="badge bg-secondary">{{ $ticket->estado }}</span>
                             @endswitch
                         </td>
 
@@ -111,18 +188,16 @@
                             @endif
                         </td>
 
-                        {{-- 🚦 TIEMPO RESTANTE --}}
+                        {{-- TIEMPO RESTANTE --}}
                         <td>
                             @if($ticket->fecha_limite)
 
                                 @php
                                     $limite = \Carbon\Carbon::parse($ticket->fecha_limite);
                                     $ahora = \Carbon\Carbon::now();
-
                                     $referencia = $ticket->fecha_cierre 
                                         ? \Carbon\Carbon::parse($ticket->fecha_cierre) 
                                         : $ahora;
-
                                     $minutos = $referencia->diffInMinutes($limite, false);
                                 @endphp
 
@@ -170,7 +245,7 @@
 
                 @empty
                     <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">
+                        <td colspan="11" class="text-center py-4 text-muted">
                             No hay tickets registrados
                         </td>
                     </tr>
@@ -182,10 +257,8 @@
     </div>
 </div>
 
-{{-- ===============================
-   🔥 BOTÓN FLOTANTE EXCEL
-=============================== --}}
-<a href="/tickets/exportar"
+{{-- EXPORTAR --}}
+<a href="{{ url('/tickets/exportar') . '?' . http_build_query(request()->all()) }}"
    class="btn btn-success shadow-lg"
    style="
        position: fixed;
