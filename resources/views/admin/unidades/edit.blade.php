@@ -42,6 +42,16 @@
                            required>
                 </div>
 
+                {{-- RAZÓN SOCIAL --}}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Razón Social</label>
+                    <input type="text"
+                           name="razon_social"
+                           class="form-control"
+                           placeholder="Ej. Mi Empresa S.A. de C.V."
+                           value="{{ old('razon_social', $unidad->razon_social) }}">
+                </div>
+
                 {{-- MARCA --}}
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Marca</label>

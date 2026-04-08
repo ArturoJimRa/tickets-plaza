@@ -12,8 +12,8 @@ class Unidad extends Model
 
     protected $fillable = [
         'nombre',
+        'razon_social',
         'marca_id',
-        'ubicacion',
         'estado'
     ];
 

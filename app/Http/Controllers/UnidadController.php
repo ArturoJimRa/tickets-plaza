@@ -24,11 +24,13 @@ class UnidadController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:100',
+            'razon_social' => 'nullable|string|max:255',
             'marca_id' => 'required|exists:marcas,id'
         ]);
 
         Unidad::create([
             'nombre' => $request->nombre,
+            'razon_social' => $request->razon_social,
             'marca_id' => $request->marca_id,
             'estado' => 'activo'
         ]);
@@ -47,10 +49,15 @@ class UnidadController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:100',
+            'razon_social' => 'nullable|string|max:255',
             'marca_id' => 'required|exists:marcas,id'
         ]);
 
-        $unidad->update($request->all());
+        $unidad->update([
+            'nombre' => $request->nombre,
+            'razon_social' => $request->razon_social,
+            'marca_id' => $request->marca_id
+        ]);
 
         return redirect()->route('unidades.index')
             ->with('success', 'Unidad actualizada correctamente');

@@ -63,6 +63,18 @@
             </select>
         </div>
 
+        {{-- AREA --}}
+        <div class="col-md-2">
+            <select name="area_id" class="form-select">
+                <option value="">Área</option>
+                @foreach($areas as $area)
+                    <option value="{{ $area->id }}" {{ request('area_id')==$area->id?'selected':'' }}>
+                    {{ $area->nombre }}
+                </option>
+                @endforeach
+            </select>
+        </div>
+
         {{-- BOTONES --}}
         <div class="col-md-1 d-grid">
             <button class="btn btn-dark">Buscar</button>
@@ -93,10 +105,7 @@
                     <th>ID</th>
                     <th>Título</th>
                     <th>Unidad</th>
-
-                    {{-- 🔥 NUEVO --}}
                     <th>Área</th>
-
                     <th>Categoría</th>
                     <th>Atendiendo</th>
                     <th>Estado</th>
@@ -118,7 +127,6 @@
 
                         <td>{{ $ticket->unidad }}</td>
 
-                        {{-- 🔥 NUEVO --}}
                         <td>
                             @if($ticket->area)
                                 <span class="badge bg-dark">
@@ -135,7 +143,6 @@
                             </span>
                         </td>
 
-                        {{-- QUIÉN ATIENDE --}}
                         <td>
                             @if($ticket->asignado_a)
                                 <span class="badge bg-primary">
@@ -188,7 +195,7 @@
                             @endif
                         </td>
 
-                        {{-- TIEMPO RESTANTE --}}
+                        {{-- TIEMPO --}}
                         <td>
                             @if($ticket->fecha_limite)
 
@@ -235,7 +242,6 @@
                             {{ \Carbon\Carbon::parse($ticket->fecha_creacion)->format('d/m/Y') }}
                         </td>
 
-                        {{-- ACCIÓN --}}
                         <td class="text-end">
                             <a href="/tickets/{{ $ticket->id }}" class="btn btn-sm btn-outline-primary">
                                 Ver detalle
@@ -257,7 +263,8 @@
     </div>
 </div>
 
-{{-- EXPORTAR --}}
+{{-- 🔥 EXPORTAR SOLO ADMIN --}}
+@if(session('rol') === 'Admin')
 <a href="{{ url('/tickets/exportar') . '?' . http_build_query(request()->all()) }}"
    class="btn btn-success shadow-lg"
    style="
@@ -271,5 +278,6 @@
    ">
     📊 Exportar a Excel
 </a>
+@endif
 
 @endsection

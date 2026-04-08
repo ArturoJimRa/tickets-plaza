@@ -9,7 +9,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class TicketController extends Controller
 {
-public function index()
+public function index(Request $request)
 {
     $rol       = session('rol');
     $rolId     = session('rol_id');
@@ -22,8 +22,6 @@ public function index()
         ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
         ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
         ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
-
-        // 🔥 AQUÍ ESTÁ EL ÁREA (ROLES)
         ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
 
         ->select(
@@ -33,10 +31,7 @@ public function index()
             'tickets.fecha_limite',
             'tickets.fecha_cierre',
             'unidades.nombre as unidad',
-
-            // 🔥 NUEVO
             'roles.nombre as area',
-
             'categorias_ticket.nombre as categoria',
             'subcategorias_ticket.nombre as subcategoria',
             DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
@@ -44,12 +39,11 @@ public function index()
             'tickets.fecha_creacion'
         );
 
-    // ===============================
-    // FILTROS SEGÚN ROL
-    // ===============================
-
+    /*
+    🔒 FILTRO POR ROL (TU LÓGICA ORIGINAL)
+    */
     if ($rol === 'Admin') {
-        // sin filtro
+        // ve todo
     }
     elseif ($rol === 'Unidad') {
         $query->where('tickets.usuario_id', $usuarioId);
@@ -65,12 +59,11 @@ public function index()
               });
     }
 
-    // ===============================
-    // FILTRO GENERAL
-    // ===============================
-
-    if (request()->filled('buscar')) {
-        $buscar = request('buscar');
+    /*
+    🔎 BUSCADOR
+    */
+    if ($request->filled('buscar')) {
+        $buscar = $request->buscar;
 
         $query->where(function($q) use ($buscar) {
             $q->where('tickets.titulo', 'like', "%{$buscar}%")
@@ -81,13 +74,49 @@ public function index()
         });
     }
 
+    /*
+    📅 FILTRO POR FECHAS
+    */
+    if ($request->filled('fecha_inicio')) {
+        $query->whereDate('tickets.fecha_creacion', '>=', $request->fecha_inicio);
+    }
+
+    if ($request->filled('fecha_fin')) {
+        $query->whereDate('tickets.fecha_creacion', '<=', $request->fecha_fin);
+    }
+
+    /*
+    📌 FILTRO ESTADO
+    */
+    if ($request->filled('estado')) {
+        $query->where('tickets.estado_ticket_id', $request->estado);
+    }
+
+    /*
+    ⚡ FILTRO PRIORIDAD
+    */
+    if ($request->filled('prioridad')) {
+        $query->where('tickets.prioridad', $request->prioridad);
+    }
+
+    /*
+    🏢 FILTRO ÁREA (🔥 ESTE ERA EL QUE TE FALTABA BIEN IMPLEMENTADO)
+    */
+    if ($request->filled('area_id')) {
+        $query->where('tickets.rol_destino_id', $request->area_id);
+    }
+
     $tickets = $query
         ->orderBy('tickets.fecha_creacion', 'desc')
         ->get();
 
-    return view('tickets.index', compact('tickets'));
-}
+    /*
+    🔥 NECESARIO PARA EL SELECT DE ÁREAS EN LA VISTA
+    */
+    $areas = DB::table('roles')->select('id', 'nombre')->get();
 
+    return view('tickets.index', compact('tickets', 'areas'));
+}
 public function misTickets()
 {
     if (session('rol') === 'Unidad') abort(403);
@@ -99,8 +128,6 @@ public function misTickets()
         ->leftJoin('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
         ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
         ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
-
-        // 🔥 ÁREA
         ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
 
         ->where('tickets.asignado_a', $usuarioId)
@@ -116,10 +143,7 @@ public function misTickets()
             'tickets.fecha_limite',
             'tickets.fecha_cierre',
             'unidades.nombre as unidad',
-
-            // 🔥 NUEVO
             'roles.nombre as area',
-
             'categorias_ticket.nombre as categoria',
             DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
             'tickets.fecha_creacion'
@@ -140,18 +164,13 @@ public function show($id)
         ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
         ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
         ->leftJoin('usuarios as cerrado', 'tickets.cerrado_por', '=', 'cerrado.id')
-
-        // 🔥 ÁREA
         ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
 
         ->select(
             'tickets.*',
             'usuarios.nombre as creador',
             'unidades.nombre as unidad',
-
-            // 🔥 NUEVO
             'roles.nombre as area',
-
             'categorias_ticket.nombre as categoria',
             'subcategorias_ticket.nombre as subcategoria',
             DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
@@ -191,6 +210,77 @@ public function show($id)
         'respuestas',
         'estados'
     ));
+}
+
+/* =========================================
+   🔥 AQUÍ ESTÁ LO IMPORTANTE
+========================================= */
+
+public function create()
+{
+    $roles = DB::table('roles')->get();
+
+    return view('tickets.create', compact('roles'));
+}
+
+/* 🔥 NUEVO: CATEGORÍAS POR ÁREA */
+public function getCategoriasPorArea($rol_id)
+{
+    $categorias = DB::table('categorias_ticket')
+        ->where('rol_destino_id', $rol_id)
+        ->select('id', 'nombre')
+        ->get();
+
+    return response()->json($categorias);
+}
+
+/* 🔥 NUEVO: SUBCATEGORÍAS */
+public function getSubcategorias($categoria_id)
+{
+    $subcategorias = DB::table('subcategorias_ticket')
+        ->where('categoria_id', $categoria_id)
+        ->select('id', 'nombre')
+        ->get();
+
+    return response()->json($subcategorias);
+}
+
+public function store(Request $request)
+{
+    $request->validate([
+        'rol_destino_id' => 'required|exists:roles,id',
+        'categoria_id'   => 'required|exists:categorias_ticket,id',
+        'titulo'         => 'required|string|max:255',
+        'descripcion'    => 'required|string',
+    ]);
+
+    $categoria = DB::table('categorias_ticket')
+        ->where('id', $request->categoria_id)
+        ->where('rol_destino_id', $request->rol_destino_id)
+        ->first();
+
+    if (!$categoria) {
+        return back()->withErrors(['categoria_id' => 'La categoría no pertenece al área seleccionada']);
+    }
+
+    $usuario = DB::table('usuarios')
+        ->where('id', session('usuario_id'))
+        ->first();
+
+    DB::table('tickets')->insert([
+        'titulo'           => $request->titulo,
+        'descripcion'      => $request->descripcion,
+        'categoria_id'     => $categoria->id,
+        'subcategoria_id'  => $request->subcategoria_id,
+        'rol_destino_id'   => $request->rol_destino_id,
+        'estado_ticket_id' => 1,
+        'unidad_id'        => $usuario->unidad_id ?? null,
+        'usuario_id'       => session('usuario_id'),
+        'fecha_creacion'   => now(),
+        'asignado_a'       => null,
+    ]);
+
+    return redirect('/tickets')->with('success', 'Ticket creado correctamente');
 }
 
 /* TODO LO DEMÁS NO SE TOCA */
@@ -278,44 +368,6 @@ public function responder(Request $request, $id)
     return back()->with('success', 'Respuesta enviada correctamente');
 }
 
-public function create()
-{
-    $categorias = DB::table('categorias_ticket')->get();
-    return view('tickets.create', compact('categorias'));
-}
-
-public function store(Request $request)
-{
-    $request->validate([
-        'categoria_id' => 'required|exists:categorias_ticket,id',
-        'titulo'       => 'required|string|max:255',
-        'descripcion'  => 'required|string',
-    ]);
-
-    $categoria = DB::table('categorias_ticket')
-        ->where('id', $request->categoria_id)
-        ->first();
-
-    $usuario = DB::table('usuarios')
-        ->where('id', session('usuario_id'))
-        ->first();
-
-    DB::table('tickets')->insert([
-        'titulo'           => $request->titulo,
-        'descripcion'      => $request->descripcion,
-        'categoria_id'     => $categoria->id,
-        'subcategoria_id'  => $request->subcategoria_id,
-        'rol_destino_id'   => $categoria->rol_destino_id,
-        'estado_ticket_id' => 1,
-        'unidad_id'        => $usuario->unidad_id ?? null,
-        'usuario_id'       => session('usuario_id'),
-        'fecha_creacion'   => now(),
-        'asignado_a'       => null,
-    ]);
-
-    return redirect('/tickets')->with('success', 'Ticket creado correctamente');
-}
-
 public function cerrar($id)
 {
     $ticket = DB::table('tickets')->where('id', $id)->first();
@@ -339,8 +391,20 @@ public function cerrar($id)
     return back()->with('success', 'Ticket cerrado correctamente');
 }
 
-public function exportarExcel()
+public function exportar(Request $request)
 {
-    return Excel::download(new TicketsExport, 'reporte_tickets.xlsx');
+    // 🔒 SOLO ADMIN
+    if (session('rol') !== 'Admin') {
+        abort(403);
+    }
+
+    return Excel::download(
+        new TicketsExport(
+            $request->fecha_inicio,
+            $request->fecha_fin,
+            $request->area_id
+        ),
+        'reporte_tickets.xlsx'
+    );
 }
 }

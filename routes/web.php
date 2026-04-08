@@ -83,7 +83,13 @@ Route::middleware(['web'])->group(function () {
     // ACTUALIZAR CATEGORÍA
     Route::put('/admin/categorias/{id}', [CategoriaTicketController::class, 'update']);
 
+    // 🔥 CATEGORÍAS POR ÁREA
+    Route::get('/categorias/{rol_id}', [TicketController::class, 'getCategoriasPorArea']);
+
+    // 🔥 SUBCATEGORÍAS POR CATEGORÍA
+    Route::get('/subcategorias/{categoria_id}', [TicketController::class, 'getSubcategorias']);
     // SUBCATEGORÍAS (SOLO ADMIN)
+    
     Route::get('/admin/subcategorias', [SubcategoriaController::class, 'index'])
     ->middleware(['authcheck', 'role:Admin']);
 
@@ -186,8 +192,8 @@ Route::post('/tickets', [TicketController::class, 'store'])
 Route::get('/tickets', [TicketController::class, 'index'])
     ->middleware('authcheck');
 
-Route::get('/tickets/exportar', [TicketController::class, 'exportarExcel'])
-    ->middleware('authcheck');
+Route::get('/tickets/exportar', [TicketController::class, 'exportar'])
+    ->middleware ('authcheck');
 
 Route::get('/tickets/{id}', [TicketController::class, 'show'])
     ->middleware('authcheck');

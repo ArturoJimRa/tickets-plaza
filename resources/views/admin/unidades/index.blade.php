@@ -30,6 +30,7 @@
                 <thead class="table-dark">
                     <tr>
                         <th>Unidad</th>
+                        <th>Razón Social</th>
                         <th>Marca</th>
                         <th class="text-center">Estado</th>
                         <th class="text-center">Acciones</th>
@@ -41,6 +42,10 @@
                         <tr>
                             <td class="fw-semibold">
                                 {{ $unidad->nombre }}
+                            </td>
+
+                            <td>
+                                {{ $unidad->razon_social ?? '—' }}
                             </td>
 
                             <td>
@@ -76,7 +81,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="text-center py-4 text-muted">
+                            <td colspan="5" class="text-center py-4 text-muted">
                                 No hay unidades registradas
                             </td>
                         </tr>
