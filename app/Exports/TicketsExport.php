@@ -5,6 +5,7 @@ namespace App\Exports;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Carbon\Carbon;
 
 class TicketsExport implements FromCollection, WithHeadings
 {
@@ -15,8 +16,8 @@ class TicketsExport implements FromCollection, WithHeadings
     public function __construct($fecha_inicio = null, $fecha_fin = null, $area_id = null)
     {
         $this->fecha_inicio = $fecha_inicio;
-        $this->fecha_fin = $fecha_fin;
-        $this->area_id = $area_id;
+        $this->fecha_fin    = $fecha_fin;
+        $this->area_id      = $area_id;
     }
 
     public function collection()
@@ -27,14 +28,15 @@ class TicketsExport implements FromCollection, WithHeadings
             ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
             ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
             ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
-            ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id') // 🔥 PARA FILTRAR ÁREA
+            ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
+
             ->select(
                 'tickets.id',
                 'tickets.titulo',
                 'tickets.prioridad',
                 'unidades.nombre as unidad',
-                'unidades.razon_social', // 🔥 NUEVO
-                'roles.nombre as area', // 🔥 NUEVO
+                'unidades.razon_social',
+                'roles.nombre as area',
                 'categorias_ticket.nombre as categoria',
                 'subcategorias_ticket.nombre as subcategoria',
                 DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
@@ -44,15 +46,22 @@ class TicketsExport implements FromCollection, WithHeadings
                 'tickets.fecha_cierre'
             );
 
-        // 🔥 FILTRO POR FECHAS
-        if ($this->fecha_inicio && $this->fecha_fin) {
-            $query->whereBetween('tickets.fecha_creacion', [
-                $this->fecha_inicio,
-                $this->fecha_fin
-            ]);
+        /*
+        🔥 FILTRO POR FECHAS (CORRECTO CON HORAS)
+        */
+        if ($this->fecha_inicio) {
+            $inicio = Carbon::parse($this->fecha_inicio)->startOfDay(); // 00:00:00
+            $query->where('tickets.fecha_creacion', '>=', $inicio);
         }
 
-        // 🔥 FILTRO POR ÁREA
+        if ($this->fecha_fin) {
+            $fin = Carbon::parse($this->fecha_fin)->endOfDay(); // 23:59:59
+            $query->where('tickets.fecha_creacion', '<=', $fin);
+        }
+
+        /*
+        🔥 FILTRO POR ÁREA
+        */
         if ($this->area_id) {
             $query->where('tickets.rol_destino_id', $this->area_id);
         }
@@ -67,8 +76,8 @@ class TicketsExport implements FromCollection, WithHeadings
             'Título',
             'Prioridad',
             'Unidad',
-            'Razón Social', // 🔥 NUEVO
-            'Área',         // 🔥 NUEVO
+            'Razón Social',
+            'Área',
             'Categoría',
             'Subcategoría',
             'Estado',

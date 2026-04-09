@@ -113,7 +113,10 @@ public function index(Request $request)
     /*
     🔥 NECESARIO PARA EL SELECT DE ÁREAS EN LA VISTA
     */
-    $areas = DB::table('roles')->select('id', 'nombre')->get();
+    $areas = DB::table('roles')
+        ->whereNotIn('nombre', ['Admin', 'Unidad'])
+        ->select('id', 'nombre')
+        ->get();
 
     return view('tickets.index', compact('tickets', 'areas'));
 }
