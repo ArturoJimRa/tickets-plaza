@@ -195,6 +195,9 @@ Route::get('/tickets', [TicketController::class, 'index'])
 Route::get('/tickets/exportar', [TicketController::class, 'exportar'])
     ->middleware ('authcheck');
 
+Route::get('/tickets/entre-areas', [TicketController::class, 'ticketsEntreAreas'])
+    ->middleware('authcheck');
+
 Route::get('/tickets/{id}', [TicketController::class, 'show'])
     ->middleware('authcheck');
 

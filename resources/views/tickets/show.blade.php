@@ -15,19 +15,13 @@
     </a>
 </div>
 
-{{-- ===============================
-   MENSAJES
-=============================== --}}
+{{-- MENSAJES --}}
 @if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
+    <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 
 @if(session('error'))
-    <div class="alert alert-danger">
-        {{ session('error') }}
-    </div>
+    <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
 
 {{-- ===============================
@@ -61,11 +55,11 @@
         <div class="row">
             <div class="col-md-4"><strong>Unidad:</strong> {{ $ticket->unidad }}</div>
             <div class="col-md-4"><strong>Categoría:</strong> {{ $ticket->categoria }}</div>
+
             @if($ticket->subcategoria)
-                <div class="col-md-4"><strong>Subcategoria:</strong>
-                    {{ $ticket->subcategoria }}
-                </div>
+                <div class="col-md-4"><strong>Subcategoría:</strong> {{ $ticket->subcategoria }}</div>
             @endif
+
             <div class="col-md-4"><strong>Creado por:</strong> {{ $ticket->creador }}</div>
         </div>
 
@@ -114,64 +108,6 @@
 </div>
 
 {{-- ===============================
-   ASIGNAR TICKET
-=============================== --}}
-@if (
-    $ticket->estado !== 'Cerrado' &&
-    (
-        session('rol') === 'Admin' ||
-        session('rol_id') == $ticket->rol_destino_id
-    )
-)
-
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white">
-        Asignar ticket
-    </div>
-
-    <div class="card-body">
-        <form method="POST" action="/tickets/{{ $ticket->id }}/asignar">
-            @csrf
-
-            {{-- USUARIO --}}
-            <div class="mb-3">
-                <select name="asignado_a" class="form-select" required>
-                    <option value="">Seleccione personal del área</option>
-                    @foreach($usuariosSistemas as $usuario)
-                        <option value="{{ $usuario->id }}"
-                            {{ $ticket->asignado_id == $usuario->id ? 'selected' : '' }}>
-                            {{ $usuario->nombre }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            {{-- PRIORIDAD --}}
-            <div class="mb-3">
-                <label>Prioridad</label>
-                <select name="prioridad" class="form-select"
-                    @if($ticket->sla_horas && session('rol') !== 'Admin') disabled @endif>
-
-                    <option value="">Seleccione</option>
-                    <option value="critico">🔴 Crítico</option>
-                    <option value="alto">🟠 Alto</option>
-                    <option value="medio">🟡 Medio</option>
-                    <option value="bajo">🟢 Bajo</option>
-                </select>
-
-                @if($ticket->sla_horas)
-                    <small class="text-muted">La prioridad ya fue definida</small>
-                @endif
-            </div>
-
-            <button class="btn btn-primary">Asignar</button>
-        </form>
-    </div>
-</div>
-
-@endif
-
-{{-- ===============================
    RESPUESTAS
 =============================== --}}
 <div class="card shadow-sm mb-4">
@@ -195,7 +131,7 @@
 </div>
 
 {{-- ===============================
-   RESPONDER / CERRAR
+   ASIGNAR + RESPONDER (UNIFICADO)
 =============================== --}}
 @if (
     $ticket->estado !== 'Cerrado' &&
@@ -208,19 +144,57 @@
 
 <div class="card shadow-sm">
     <div class="card-header bg-success text-white">
-        Responder ticket
+        Gestionar Ticket
     </div>
 
     <div class="card-body">
         <form method="POST" action="/tickets/{{ $ticket->id }}/responder">
             @csrf
 
+            {{-- ASIGNAR USUARIO --}}
             <div class="mb-3">
+                <label>Asignar a</label>
+                <select name="asignado_a" class="form-select">
+                    <option value="">Seleccione personal</option>
+                    @foreach($usuariosSistemas as $usuario)
+                        <option value="{{ $usuario->id }}"
+                            {{ $ticket->asignado_id == $usuario->id ? 'selected' : '' }}>
+                            {{ $usuario->nombre }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- PRIORIDAD SOLO ADMIN Y SOLO UNA VEZ --}}
+            @if(session('rol') === 'Admin' && !$ticket->prioridad)
+                <div class="mb-3">
+                    <label>Prioridad</label>
+                    <select name="prioridad" class="form-select">
+                        <option value="">Seleccione</option>
+                        <option value="critico">🔴 Crítico</option>
+                        <option value="alto">🟠 Alto</option>
+                        <option value="medio">🟡 Medio</option>
+                        <option value="bajo">🟢 Bajo</option>
+                    </select>
+                </div>
+            @elseif($ticket->prioridad)
+                <div class="mb-3">
+                    <label>Prioridad</label>
+                    <input type="text" class="form-control"
+                        value="{{ ucfirst($ticket->prioridad) }}" disabled>
+                    <small class="text-muted">La prioridad ya fue definida</small>
+                </div>
+            @endif
+
+            {{-- MENSAJE --}}
+            <div class="mb-3">
+                <label>Mensajes / Respuestas</label>
                 <textarea name="mensaje" class="form-control" rows="4" required></textarea>
             </div>
 
+            {{-- ESTADO --}}
             <div class="mb-3">
-                <label class="form-label">Cambiar estado</label>
+                <label>Cambiar estado</label>
                 <select name="estado_ticket_id" class="form-select" required>
                     @foreach ($estados as $estado)
                         <option value="{{ $estado->id }}"
@@ -231,15 +205,7 @@
                 </select>
             </div>
 
-            <button class="btn btn-success">Enviar respuesta</button>
-        </form>
-
-        <hr>
-
-        <form method="POST" action="/tickets/{{ $ticket->id }}/cerrar"
-              onsubmit="return confirm('¿Seguro que deseas cerrar este ticket?')">
-            @csrf
-            <button class="btn btn-danger">Cerrar ticket</button>
+            <button class="btn btn-success">Guardar cambios</button>
         </form>
     </div>
 </div>
