@@ -57,10 +57,6 @@
                         <a class="nav-link" href="/tickets">Tickets</a>
                     </li>
 
-                    <li>
-                        <a class="nav-link" href="/tickets/entre-areas">Tickets entre áreas</a>
-                    </li>
-
                     <li class="nav-item">
                         <a class="nav-link" href="/tickets/create">Crear ticket</a>
                     </li>
