@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Model
 {
+    use Notifiable;
+
     protected $table = 'usuarios';
 
-    public $timestamps = false; // 🔥 CLAVE
+    public $timestamps = false;
 
     protected $fillable = [
         'nombre',
@@ -18,4 +21,9 @@ class User extends Model
         'unidad_id',
         'estado'
     ];
+
+    public function routeNotificationForMail()
+    {
+        return $this->correo;
+    }
 }

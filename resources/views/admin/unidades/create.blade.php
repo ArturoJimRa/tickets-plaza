@@ -47,7 +47,8 @@
                            name="razon_social"
                            class="form-control"
                            placeholder="Ej. Mi Empresa S.A. de C.V."
-                           value="{{ old('razon_social') }}">
+                           value="{{ old('razon_social') }}"
+                           required>
                 </div>
 
                 {{-- MARCA --}}

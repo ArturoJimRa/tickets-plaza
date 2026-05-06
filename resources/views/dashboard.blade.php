@@ -144,6 +144,17 @@
             </div>
         </div>
 
+        <div class="col-md-4">
+            <div class="card text-bg-primary h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Tickets entre áreas</h5>
+                    <p class="card-text">Tickets dirigidos a otras áreas</p>
+                    <a href="/tickets/entre-areas" class="btn btn-light btn-sm">Ver</a>
+                </div>
+            </div>
+        </div>
+
+
     </div>
     @endif
 
