@@ -3,12 +3,157 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<div class="container mt-4">
 
-    <h4 class="mb-1">👋 Bienvenido, {{ session('nombre') }}</h4>
-    <p class="text-muted mb-4">
-        Rol: <strong>{{ session('rol') }}</strong>
-    </p>
+
+    {{-- 🔔 HEADER CON NOTIFICACIONES --}}
+    @php
+    $notificaciones = DB::table('notificaciones')
+        ->where('usuario_id', session('usuario_id'))
+        ->orderBy('created_at', 'desc')
+        ->limit(5)
+        ->get();
+
+    $noLeidas = DB::table('notificaciones')
+        ->where('usuario_id', session('usuario_id'))
+        ->where('leida', 0)
+        ->count();
+    @endphp
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <div>
+            <h4 class="mb-1">👋 Bienvenido, {{ session('nombre') }}</h4>
+            <p class="text-muted mb-0">
+                Rol: <strong>{{ session('rol') }}</strong>
+            </p>
+        </div>
+
+         {{-- 🔔 NOTIFICACIONES --}}
+        @php
+        $notificaciones = DB::table('notificaciones')
+            ->where('usuario_id', session('usuario_id'))
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        $noLeidas = DB::table('notificaciones')
+            ->where('usuario_id', session('usuario_id'))
+            ->where('leida', 0)
+            ->count();
+        @endphp
+
+        <div class="dropdown">
+
+            <button
+                class="btn btn-sm position-relative shadow-sm rounded-circle notification-btn {{ $noLeidas > 0 ? 'btn-danger notification-alert' : 'btn-outline-secondary' }}"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                id="btnNotificaciones"
+                style="width:45px;height:45px;"
+            >
+                🔔
+
+                @if($noLeidas > 0)
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-light text-danger border">
+                    {{ $noLeidas }}
+                </span>
+                @endif
+            </button>
+
+            <div class="dropdown-menu dropdown-menu-end p-0 shadow border-0"
+                 style="width: 380px; max-height: 500px; overflow-y: auto;">
+
+                {{-- HEADER --}}
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom bg-light">
+
+                    <strong>Notificaciones</strong>
+
+                    <div class="d-flex gap-1">
+
+                        {{-- LEER TODAS --}}
+                        <form method="POST" action="/notificaciones/leer-todas">
+                            @csrf
+                            <button class="btn btn-sm btn-light border">
+                                ✔
+                            </button>
+                        </form>
+
+                        {{-- ELIMINAR TODAS --}}
+                        <form method="POST" action="/notificaciones/eliminar-todas">
+                            @csrf
+                            <button class="btn btn-sm btn-light border text-danger">
+                                🗑
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+
+                {{-- LISTADO --}}
+                @forelse($notificaciones as $n)
+
+                <div class="px-3 py-2 border-bottom small {{ !$n->leida ? 'bg-light' : '' }}">
+
+                    <div class="d-flex justify-content-between align-items-start">
+
+                        <div style="width:85%;">
+
+                            <div class="fw-semibold">
+                                {{ $n->titulo }}
+                            </div>
+
+                            <div class="text-muted small">
+                                {{ $n->mensaje }}
+                            </div>
+
+                            <div class="text-secondary" style="font-size:11px;">
+                                {{ \Carbon\Carbon::parse($n->created_at)->diffForHumans() }}
+                            </div>
+
+                        </div>
+
+                        <div class="d-flex flex-column gap-1">
+
+                            {{-- LEÍDA --}}
+                            @if(!$n->leida)
+                            <form method="POST" action="/notificaciones/{{ $n->id }}/leer">
+                                @csrf
+                                <button class="btn btn-sm btn-light border py-0 px-1">
+                                    ✔
+                                </button>
+                            </form>
+                            @endif
+
+                            {{-- ELIMINAR --}}
+                            <form method="POST" action="/notificaciones/{{ $n->id }}">
+                                @csrf
+                                @method('DELETE')
+
+                                <button class="btn btn-sm btn-light border text-danger py-0 px-1">
+                                    ✕
+                                </button>
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                @empty
+
+                <div class="p-3 text-center text-muted small">
+                    No tienes notificaciones
+                </div>
+
+                @endforelse
+
+            </div>
+        </div>
+
+    </div>
 
     {{-- =======================
         ADMIN
@@ -109,9 +254,8 @@
 
     {{-- =======================
     ROLES QUE ATIENDEN TICKETS
-    (Sistemas, Marketing, RH, etc.)
-======================= --}}
-@if(session('rol') !== 'Admin' && session('rol') !== 'Unidad')
+    ======================= --}}
+    @if(session('rol') !== 'Admin' && session('rol') !== 'Unidad')
     <div class="row g-3">
 
         <div class="col-md-4">
@@ -153,7 +297,6 @@
                 </div>
             </div>
         </div>
-
 
     </div>
     @endif

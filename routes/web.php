@@ -11,6 +11,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\UnidadController;
 
 
+
 Route::get('/', function () {
     return redirect('/login');
 });
@@ -213,6 +214,44 @@ Route::post('/tickets/{id}/asignar', [TicketController::class, 'asignar'])
 Route::post('/tickets/{id}/cerrar', [TicketController::class, 'cerrar'])
     ->middleware(['authcheck']);
 
+
+/*
+|-------------------------------------------------------------------------- 
+| NOTIFICACIONES
+|-------------------------------------------------------------------------- 
+*/
+
+    Route::post('/notificaciones/{id}/leer', function ($id) {
+    DB::table('notificaciones')
+        ->where('id', $id)
+        ->update(['leida' => 1]);
+
+    return back();
+});
+
+Route::post('/notificaciones/leer-todas', function () {
+    DB::table('notificaciones')
+        ->where('usuario_id', session('usuario_id'))
+        ->update(['leida' => 1]);
+
+    return back();
+});
+
+Route::delete('/notificaciones/{id}', function ($id) {
+    DB::table('notificaciones')
+        ->where('id', $id)
+        ->delete();
+
+    return back();
+});
+
+Route::post('/notificaciones/eliminar-todas', function () {
+    DB::table('notificaciones')
+        ->where('usuario_id', session('usuario_id'))
+        ->delete();
+
+    return back();
+});
 /*
 |-------------------------------------------------------------------------- 
 | LOGOUT
