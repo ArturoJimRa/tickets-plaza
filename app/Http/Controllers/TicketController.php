@@ -146,7 +146,7 @@ public function misTickets()
             'unidades.nombre as unidad',
             'roles.nombre as area',
             'categorias_ticket.nombre as categoria',
-            'DB::raw("COALESCE(estados_ticket.nombre, \'Abierto\') as estado")',
+            DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
             'tickets.fecha_creacion'
         )
 
