@@ -40,15 +40,22 @@ class RolController extends Controller
 
         $request->validate(
             [
-                'nombre' => 'required|unique:roles,nombre'
+                'nombre' => 'required|unique:roles,nombre',
+                'prefijo_folio' => 'nullable|string|max:10'
             ],
             [
                 'nombre.unique' => 'Este rol ya existe'
             ]
         );
 
+        // Limpia el texto, lo convierte a mayúsculas o guarda NULL si viene vacío
+        $prefijo = $request->filled('prefijo_folio') 
+            ? strtoupper(trim($request->prefijo_folio)) 
+            : null;
+
         DB::table('roles')->insert([
-            'nombre' => $request->nombre
+            'nombre' => $request->nombre,
+            'prefijo_folio' => $prefijo,
         ]);
 
         return redirect('/admin/roles')
@@ -79,18 +86,23 @@ class RolController extends Controller
         if (session('rol') !== 'Admin') abort(403);
 
         $request->validate([
-            'nombre' => 'required|string|max:255|unique:roles,nombre,' . $id
+            'nombre' => 'required|string|max:255|unique:roles,nombre,' . $id,
+            'prefijo_folio' => 'nullable|string|max:10'
         ]);
+
+        // Limpia el texto, lo convierte a mayúsculas o guarda NULL si viene vacío
+        $prefijo = $request->filled('prefijo_folio') 
+            ? strtoupper(trim($request->prefijo_folio)) 
+            : null;
 
         DB::table('roles')
             ->where('id', $id)
             ->update([
                 'nombre' => $request->nombre,
+                'prefijo_folio' => $prefijo,
             ]);
 
         return redirect('/admin/roles')
             ->with('success', 'Rol actualizado correctamente');
     }
-
-
 }

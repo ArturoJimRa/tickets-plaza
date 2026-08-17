@@ -25,7 +25,7 @@
         {{-- BUSCADOR --}}
         <div class="col-md-3">
             <input type="text" name="buscar" class="form-control"
-                   placeholder="Buscar..."
+                   placeholder="Buscar por folio, título..."
                    value="{{ request('buscar') }}">
         </div>
 
@@ -102,7 +102,7 @@
         <table class="table table-hover mb-0 align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th>ID</th>
+                    <th>Folio</th>
                     <th>Título</th>
                     <th>Unidad</th>
                     <th>Área</th>
@@ -119,7 +119,11 @@
 
                 @forelse($tickets as $ticket)
                     <tr>
-                        <td>#{{ $ticket->id }}</td>
+                        <td>
+                            <span class="fw-bold text-primary">
+                                {{ $ticket->folio ?? '#'.$ticket->id }}
+                            </span>
+                        </td>
 
                         <td>
                             <strong>{{ $ticket->titulo }}</strong>

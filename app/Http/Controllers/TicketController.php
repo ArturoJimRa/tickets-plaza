@@ -27,6 +27,7 @@ public function index(Request $request)
 
         ->select(
             'tickets.id',
+            'tickets.folio',
             'tickets.titulo',
             'tickets.prioridad',
             'tickets.fecha_limite',
@@ -72,6 +73,7 @@ public function index(Request $request)
         $query->where(function($q) use ($buscar) {
 
             $q->where('tickets.titulo', 'like', "%{$buscar}%")
+              ->orWhere('tickets.folio', 'like', "%{$buscar}%")
               ->orWhere('tickets.id', $buscar)
               ->orWhere('unidades.nombre', 'like', "%{$buscar}%")
               ->orWhere('categorias_ticket.nombre', 'like', "%{$buscar}%")
@@ -136,6 +138,7 @@ public function misTickets()
 
         ->select(
             'tickets.id',
+            'tickets.folio',
             'tickets.titulo',
             'tickets.prioridad',
             'tickets.fecha_limite',
@@ -143,7 +146,7 @@ public function misTickets()
             'unidades.nombre as unidad',
             'roles.nombre as area',
             'categorias_ticket.nombre as categoria',
-            DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
+            'DB::raw("COALESCE(estados_ticket.nombre, \'Abierto\') as estado")',
             'tickets.fecha_creacion'
         )
 
@@ -246,8 +249,21 @@ public function store(Request $request)
         ->where('id', session('usuario_id'))
         ->first();
 
+    // 💡 GENERACIÓN DE FOLIO CONSECUTIVO POR ÁREA
+    $rolDestino = DB::table('roles')->where('id', $request->rol_destino_id)->first();
+    $prefijo = ($rolDestino && !empty($rolDestino->prefijo_folio)) ? $rolDestino->prefijo_folio : 'TCK';
+
+    $maxConsecutivo = DB::table('tickets')
+        ->where('rol_destino_id', $request->rol_destino_id)
+        ->max('consecutivo_area');
+
+    $consecutivoArea = ($maxConsecutivo ?? 0) + 1;
+    $folioGenerado = $prefijo . '-' . str_pad($consecutivoArea, 5, '0', STR_PAD_LEFT);
+
     $ticketId = DB::table('tickets')->insertGetId([
 
+        'folio'            => $folioGenerado,
+        'consecutivo_area' => $consecutivoArea,
         'titulo'           => $request->titulo,
         'descripcion'      => $request->descripcion,
         'categoria_id'     => $request->categoria_id,
@@ -272,14 +288,14 @@ public function store(Request $request)
         DB::table('notificaciones')->insert([
             'usuario_id' => $u->id,
             'titulo'     => '🎫 Nuevo ticket',
-            'mensaje'    => 'Se creó el ticket: '.$request->titulo,
+            'mensaje'    => 'Se creó el ticket ('.$folioGenerado.'): '.$request->titulo,
             'leida'      => 0,
             'created_at' => now()
         ]);
     }
 
     return redirect('/tickets')
-        ->with('success', 'Ticket creado correctamente');
+        ->with('success', 'Ticket creado correctamente con folio: ' . $folioGenerado);
 }
 
 public function asignar(Request $request, $id)
@@ -301,7 +317,7 @@ public function asignar(Request $request, $id)
     DB::table('notificaciones')->insert([
         'usuario_id' => $request->asignado_a,
         'titulo'     => '📌 Ticket asignado',
-        'mensaje'    => 'Se te asignó el ticket: '.$ticket->titulo,
+        'mensaje'    => 'Se te asignó el ticket: '.($ticket->folio ?? '#'.$ticket->id).' - '.$ticket->titulo,
         'leida'      => 0,
         'created_at' => now()
     ]);
@@ -354,7 +370,7 @@ public function responder(Request $request, $id)
         DB::table('notificaciones')->insert([
             'usuario_id' => $request->asignado_a,
             'titulo'     => '📌 Ticket asignado',
-            'mensaje'    => 'Se te asignó el ticket #'.$ticket->id,
+            'mensaje'    => 'Se te asignó el ticket '.($ticket->folio ?? '#'.$ticket->id),
             'leida'      => 0,
             'created_at' => now()
         ]);

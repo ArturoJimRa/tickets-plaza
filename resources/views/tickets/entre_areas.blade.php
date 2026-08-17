@@ -11,7 +11,7 @@
     <div class="card shadow-sm">
         <div class="card-body">
 
-            {{-- 🔎 FILTROS (opcional, ya listo para después) --}}
+            {{-- 🔎 FILTROS --}}
             <form method="GET" class="row g-2 mb-3">
 
                 <div class="col-md-3">
@@ -41,7 +41,7 @@
 
                     <thead class="table-dark">
                         <tr>
-                            <th>ID</th>
+                            <th>Folio</th>
                             <th>Título</th>
                             <th>Área origen</th>
                             <th>Área destino</th>
@@ -54,7 +54,11 @@
                     <tbody>
                         @foreach($tickets as $t)
                         <tr>
-                            <td>{{ $t->id }}</td>
+                            <td>
+                                <span class="fw-bold text-primary">
+                                    {{ $t->folio ?? '#'.$t->id }}
+                                </span>
+                            </td>
 
                             <td>
                                 <strong>{{ $t->titulo }}</strong>

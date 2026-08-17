@@ -30,7 +30,7 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th>#</th>
+                        <th>Folio</th>
                         <th>Título</th>
                         <th>Unidad</th>
                         <th>Categoría</th>
@@ -45,7 +45,11 @@
                 <tbody>
                     @foreach ($tickets as $t)
                     <tr>
-                        <td>{{ $t->id }}</td>
+                        <td>
+                            <span class="fw-bold text-primary">
+                                {{ $t->folio ?? '#'.$t->id }}
+                            </span>
+                        </td>
 
                         <td><strong>{{ $t->titulo }}</strong></td>
 

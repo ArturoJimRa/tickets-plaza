@@ -27,6 +27,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
+                        <th>Prefijo Folio</th>
                         <th class="text-center">Acción</th>
                     </tr>
                 </thead>
@@ -36,9 +37,15 @@
                         <tr>
                             <td>{{ $r->id }}</td>
                             <td>{{ $r->nombre }}</td>
+                            <td>
+                                @if($r->prefijo_folio)
+                                    <span class="badge bg-primary">{{ $r->prefijo_folio }}</span>
+                                @else
+                                    <span class="text-muted">Sin prefijo</span>
+                                @endif
+                            </td>
 
                             <td class="text-center">
-
                                 {{-- EDITAR --}}
                                 <a href="/admin/roles/{{ $r->id }}/edit"
                                    class="btn btn-sm btn-warning">
@@ -49,7 +56,7 @@
 
                     @empty
                         <tr>
-                            <td colspan="3" class="text-center text-muted py-4">
+                            <td colspan="4" class="text-center text-muted py-4">
                                 No hay roles registrados
                             </td>
                         </tr>

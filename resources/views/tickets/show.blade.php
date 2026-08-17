@@ -10,7 +10,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
 
     <h4 class="mb-0">
-        🎫 Ticket #{{ $ticket->id }}
+        🎫 Ticket: <span class="text-primary">{{ $ticket->folio ?? '#'.$ticket->id }}</span>
     </h4>
 
     <a href="/tickets" class="btn btn-outline-secondary btn-sm">
@@ -45,12 +45,17 @@
 
         <div class="row mb-3">
 
-            <div class="col-md-6">
+            <div class="col-md-4">
+                <strong>Folio:</strong>
+                <span class="fw-bold text-primary">{{ $ticket->folio ?? '#'.$ticket->id }}</span>
+            </div>
+
+            <div class="col-md-4">
                 <strong>Título:</strong>
                 {{ $ticket->titulo }}
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-4">
 
                 <strong>Estado:</strong>
 
