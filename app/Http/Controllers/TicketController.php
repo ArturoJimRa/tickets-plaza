@@ -265,7 +265,10 @@ class TicketController extends Controller
 
     public function create()
     {
-        $roles = DB::table('roles')->get();
+        $roles = DB::table('roles')
+            ->where('tipo_acceso', 'gestion')
+            ->orderBy('nombre')
+            ->get();
 
         return view('tickets.create', compact('roles'));
     }

@@ -42,7 +42,9 @@ class RolController extends Controller
             [
                 'nombre' => 'required|unique:roles,nombre',
                 'prefijo_folio' => 'nullable|string|max:10',
-                'tipo_acceso' => 'required|in:gestion,solicitante'
+
+                // admin | gestion | solicitante
+                'tipo_acceso' => 'required|in:admin,gestion,solicitante'
             ],
             [
                 'nombre.unique' => 'Este rol ya existe',
@@ -104,6 +106,8 @@ class RolController extends Controller
         $request->validate([
             'nombre' => 'required|string|max:255|unique:roles,nombre,' . $id,
             'prefijo_folio' => 'nullable|string|max:10',
+
+            // admin | gestion | solicitante
             'tipo_acceso' => 'required|in:admin,gestion,solicitante'
         ]);
 

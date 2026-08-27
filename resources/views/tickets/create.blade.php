@@ -58,7 +58,7 @@
                         <select name="rol_destino_id" id="area" class="form-select" required>
                             <option value="">Seleccione un área</option>
                             @foreach($roles as $rol)
-                                @if($rol->nombre !== 'Admin' && $rol->nombre !== 'Unidad')
+                                @if($rol->tipo_acceso === 'gestion')
                                     <option value="{{ $rol->id }}"
                                         {{ old('rol_destino_id') == $rol->id ? 'selected' : '' }}>
                                         {{ $rol->nombre }}
