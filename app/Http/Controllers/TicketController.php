@@ -10,484 +10,592 @@ use Maatwebsite\Excel\Facades\Excel;
 class TicketController extends Controller
 {
 
-public function index(Request $request)
-{
-    $rol       = session('rol');
-    $rolId     = session('rol_id');
-    $usuarioId = session('usuario_id');
-    $esJefe    = session('es_jefe');
+    public function index(Request $request)
+    {
+        $rol         = session('rol');
+        $rolId       = session('rol_id');
+        $usuarioId   = session('usuario_id');
+        $esJefe      = session('es_jefe');
+        $tipoAcceso  = session('tipo_acceso');
 
-    $query = DB::table('tickets')
-        ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
-        ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
-        ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
-        ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
-        ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
-        ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
+        $query = DB::table('tickets')
+            ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
+            ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
+            ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
+            ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
+            ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
+            ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
 
-        ->select(
-            'tickets.id',
-            'tickets.folio',
-            'tickets.titulo',
-            'tickets.prioridad',
-            'tickets.fecha_limite',
-            'tickets.fecha_cierre',
-            'unidades.nombre as unidad',
-            'roles.nombre as area',
-            'categorias_ticket.nombre as categoria',
-            'subcategorias_ticket.nombre as subcategoria',
-            DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
-            'asignado.nombre as asignado_a',
-            'tickets.fecha_creacion'
-        );
+            ->select(
+                'tickets.id',
+                'tickets.folio',
+                'tickets.titulo',
+                'tickets.prioridad',
+                'tickets.fecha_limite',
+                'tickets.fecha_cierre',
+                'unidades.nombre as unidad',
+                'roles.nombre as area',
+                'categorias_ticket.nombre as categoria',
+                'subcategorias_ticket.nombre as subcategoria',
+                DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
+                'asignado.nombre as asignado_a',
+                'tickets.fecha_creacion'
+            );
 
-    if ($rol === 'Admin') {
+        // ==========================================
+        // ADMIN → VE TODOS LOS TICKETS
+        // ==========================================
+        if ($tipoAcceso === 'admin') {
 
-    }
-    elseif ($rol === 'Unidad') {
+            // No aplicar filtros
 
-        $query->where('tickets.usuario_id', $usuarioId);
+        }
 
-    }
-    elseif ($esJefe) {
+        // ==========================================
+        // SOLICITANTE → SOLO VE SUS PROPIOS TICKETS
+        // Unidad
+        // Administración y Finanzas
+        // ==========================================
+        elseif ($tipoAcceso === 'solicitante') {
 
-        $query->where('tickets.rol_destino_id', $rolId);
+            $query->where('tickets.usuario_id', $usuarioId);
 
-    }
-    else {
+        }
 
-        $query->where('tickets.rol_destino_id', $rolId)
-              ->where(function($q) use ($usuarioId){
+        // ==========================================
+        // JEFE DE ÁREA → VE TODOS LOS TICKETS
+        // DE SU ÁREA
+        // ==========================================
+        elseif ($esJefe) {
+
+            $query->where('tickets.rol_destino_id', $rolId);
+
+        }
+
+        // ==========================================
+        // TRABAJADOR → VE LOS TICKETS DISPONIBLES
+        // Y LOS QUE LE HAN SIDO ASIGNADOS
+        // ==========================================
+        else {
+
+            $query->where('tickets.rol_destino_id', $rolId)
+                ->where(function ($q) use ($usuarioId) {
 
                     $q->whereNull('tickets.asignado_a')
-                      ->orWhere('tickets.asignado_a', $usuarioId)
-                      ->orWhere('tickets.estado_ticket_id', 4);
+                        ->orWhere('tickets.asignado_a', $usuarioId)
+                        ->orWhere('tickets.estado_ticket_id', 4);
 
-              });
+                });
+        }
+
+        // ==========================================
+        // BUSCADOR
+        // ==========================================
+        if ($request->filled('buscar')) {
+
+            $buscar = $request->buscar;
+
+            $query->where(function ($q) use ($buscar) {
+
+                $q->where('tickets.titulo', 'like', "%{$buscar}%")
+                    ->orWhere('tickets.folio', 'like', "%{$buscar}%")
+                    ->orWhere('tickets.id', $buscar)
+                    ->orWhere('unidades.nombre', 'like', "%{$buscar}%")
+                    ->orWhere('categorias_ticket.nombre', 'like', "%{$buscar}%")
+                    ->orWhere('tickets.prioridad', 'like', "%{$buscar}%");
+
+            });
+        }
+
+        // ==========================================
+        // FILTROS
+        // ==========================================
+        if ($request->filled('fecha_inicio')) {
+            $query->whereDate('tickets.fecha_creacion', '>=', $request->fecha_inicio);
+        }
+
+        if ($request->filled('fecha_fin')) {
+            $query->whereDate('tickets.fecha_creacion', '<=', $request->fecha_fin);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('tickets.estado_ticket_id', $request->estado);
+        }
+
+        if ($request->filled('prioridad')) {
+            $query->where('tickets.prioridad', $request->prioridad);
+        }
+
+        if ($request->filled('area_id')) {
+            $query->where('tickets.rol_destino_id', $request->area_id);
+        }
+
+        $tickets = $query
+            ->orderBy('tickets.fecha_creacion', 'desc')
+            ->get();
+
+        $areas = DB::table('roles')
+            ->where('tipo_acceso', 'gestion')
+            ->select('id', 'nombre')
+            ->get();
+
+        return view('tickets.index', compact('tickets', 'areas'));
     }
 
-    if ($request->filled('buscar')) {
 
-        $buscar = $request->buscar;
+    public function misTickets()
+    {
+        // ==========================================
+        // LOS SOLICITANTES NO TIENEN ACCESO
+        // A "MIS TICKETS"
+        // ==========================================
+        if (session('tipo_acceso') === 'solicitante') {
+            abort(403);
+        }
 
-        $query->where(function($q) use ($buscar) {
+        $usuarioId = session('usuario_id');
 
-            $q->where('tickets.titulo', 'like', "%{$buscar}%")
-              ->orWhere('tickets.folio', 'like', "%{$buscar}%")
-              ->orWhere('tickets.id', $buscar)
-              ->orWhere('unidades.nombre', 'like', "%{$buscar}%")
-              ->orWhere('categorias_ticket.nombre', 'like', "%{$buscar}%")
-              ->orWhere('tickets.prioridad', 'like', "%{$buscar}%");
+        $tickets = DB::table('tickets')
+            ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
+            ->leftJoin('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
+            ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
+            ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
+            ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
 
-        });
+            ->where('tickets.asignado_a', $usuarioId)
+
+            ->where(function ($q) {
+
+                $q->whereNull('estados_ticket.nombre')
+                    ->orWhere('estados_ticket.nombre', '!=', 'Cerrado');
+
+            })
+
+            ->select(
+                'tickets.id',
+                'tickets.folio',
+                'tickets.titulo',
+                'tickets.prioridad',
+                'tickets.fecha_limite',
+                'tickets.fecha_cierre',
+                'unidades.nombre as unidad',
+                'roles.nombre as area',
+                'categorias_ticket.nombre as categoria',
+                DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
+                'tickets.fecha_creacion'
+            )
+
+            ->orderBy('tickets.fecha_creacion', 'desc')
+            ->get();
+
+        return view('tickets.mis_tickets', compact('tickets'));
     }
 
-    if ($request->filled('fecha_inicio')) {
-        $query->whereDate('tickets.fecha_creacion', '>=', $request->fecha_inicio);
+
+    public function show($id)
+    {
+        $ticket = DB::table('tickets')
+            ->join('usuarios', 'tickets.usuario_id', '=', 'usuarios.id')
+            ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
+            ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
+            ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
+            ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
+            ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
+            ->leftJoin('usuarios as cerrado', 'tickets.cerrado_por', '=', 'cerrado.id')
+            ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
+
+            ->select(
+                'tickets.*',
+                'usuarios.nombre as creador',
+                'unidades.nombre as unidad',
+                'roles.nombre as area',
+                'categorias_ticket.nombre as categoria',
+                'subcategorias_ticket.nombre as subcategoria',
+                DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
+                'asignado.nombre as asignado_a',
+                'asignado.id as asignado_id',
+                'cerrado.nombre as cerrado_por_nombre'
+            )
+
+            ->where('tickets.id', $id)
+            ->first();
+
+        if (!$ticket) {
+            abort(404);
+        }
+
+        // ==========================================
+        // SEGURIDAD PARA SOLICITANTES
+        // SOLO PUEDEN VER SUS PROPIOS TICKETS
+        // ==========================================
+        if (
+            session('tipo_acceso') === 'solicitante' &&
+            $ticket->usuario_id != session('usuario_id')
+        ) {
+            abort(403);
+        }
+
+        $usuariosSistemas = DB::table('usuarios')
+            ->where('rol_id', $ticket->rol_destino_id)
+            ->where('estado', 'activo')
+            ->select('id', 'nombre')
+            ->get();
+
+        $respuestas = DB::table('respuestas_ticket')
+            ->join('usuarios', 'respuestas_ticket.usuario_id', '=', 'usuarios.id')
+            ->where('respuestas_ticket.ticket_id', $id)
+            ->orderBy('respuestas_ticket.fecha', 'asc')
+            ->select(
+                'usuarios.nombre',
+                'respuestas_ticket.mensaje',
+                'respuestas_ticket.fecha'
+            )
+            ->get();
+
+        $estados = DB::table('estados_ticket')->get();
+
+        return view('tickets.show', compact(
+            'ticket',
+            'usuariosSistemas',
+            'respuestas',
+            'estados'
+        ));
     }
 
-    if ($request->filled('fecha_fin')) {
-        $query->whereDate('tickets.fecha_creacion', '<=', $request->fecha_fin);
+
+    public function create()
+    {
+        $roles = DB::table('roles')->get();
+
+        return view('tickets.create', compact('roles'));
     }
 
-    if ($request->filled('estado')) {
-        $query->where('tickets.estado_ticket_id', $request->estado);
+
+    public function getCategoriasPorArea($rol_id)
+    {
+        return DB::table('categorias_ticket')
+            ->where('rol_destino_id', $rol_id)
+            ->select('id', 'nombre')
+            ->get();
     }
 
-    if ($request->filled('prioridad')) {
-        $query->where('tickets.prioridad', $request->prioridad);
+
+    public function getSubcategorias($categoria_id)
+    {
+        return DB::table('subcategorias_ticket')
+            ->where('categoria_id', $categoria_id)
+            ->select('id', 'nombre')
+            ->get();
     }
 
-    if ($request->filled('area_id')) {
-        $query->where('tickets.rol_destino_id', $request->area_id);
-    }
 
-    $tickets = $query
-        ->orderBy('tickets.fecha_creacion', 'desc')
-        ->get();
-
-    $areas = DB::table('roles')
-        ->whereNotIn('nombre', ['Admin', 'Unidad'])
-        ->select('id', 'nombre')
-        ->get();
-
-    return view('tickets.index', compact('tickets', 'areas'));
-}
-
-public function misTickets()
-{
-    if (session('rol') === 'Unidad') abort(403);
-
-    $usuarioId = session('usuario_id');
-
-    $tickets = DB::table('tickets')
-        ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
-        ->leftJoin('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
-        ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
-        ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
-        ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
-
-        ->where('tickets.asignado_a', $usuarioId)
-
-        ->where(function($q){
-
-            $q->whereNull('estados_ticket.nombre')
-              ->orWhere('estados_ticket.nombre', '!=', 'Cerrado');
-
-        })
-
-        ->select(
-            'tickets.id',
-            'tickets.folio',
-            'tickets.titulo',
-            'tickets.prioridad',
-            'tickets.fecha_limite',
-            'tickets.fecha_cierre',
-            'unidades.nombre as unidad',
-            'roles.nombre as area',
-            'categorias_ticket.nombre as categoria',
-            DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
-            'tickets.fecha_creacion'
-        )
-
-        ->orderBy('tickets.fecha_creacion', 'desc')
-        ->get();
-
-    return view('tickets.mis_tickets', compact('tickets'));
-}
-
-public function show($id)
-{
-    $ticket = DB::table('tickets')
-        ->join('usuarios', 'tickets.usuario_id', '=', 'usuarios.id')
-        ->leftJoin('unidades', 'tickets.unidad_id', '=', 'unidades.id')
-        ->join('categorias_ticket', 'tickets.categoria_id', '=', 'categorias_ticket.id')
-        ->leftJoin('subcategorias_ticket', 'tickets.subcategoria_id', '=', 'subcategorias_ticket.id')
-        ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
-        ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
-        ->leftJoin('usuarios as cerrado', 'tickets.cerrado_por', '=', 'cerrado.id')
-        ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
-
-        ->select(
-            'tickets.*',
-            'usuarios.nombre as creador',
-            'unidades.nombre as unidad',
-            'roles.nombre as area',
-            'categorias_ticket.nombre as categoria',
-            'subcategorias_ticket.nombre as subcategoria',
-            DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
-            'asignado.nombre as asignado_a',
-            'asignado.id as asignado_id',
-            'cerrado.nombre as cerrado_por_nombre'
-        )
-
-        ->where('tickets.id', $id)
-        ->first();
-
-    if (!$ticket) abort(404);
-
-    $usuariosSistemas = DB::table('usuarios')
-        ->where('rol_id', $ticket->rol_destino_id)
-        ->where('estado', 'activo')
-        ->select('id', 'nombre')
-        ->get();
-
-    $respuestas = DB::table('respuestas_ticket')
-        ->join('usuarios', 'respuestas_ticket.usuario_id', '=', 'usuarios.id')
-        ->where('respuestas_ticket.ticket_id', $id)
-        ->orderBy('respuestas_ticket.fecha', 'asc')
-        ->select(
-            'usuarios.nombre',
-            'respuestas_ticket.mensaje',
-            'respuestas_ticket.fecha'
-        )
-        ->get();
-
-    $estados = DB::table('estados_ticket')->get();
-
-    return view('tickets.show', compact(
-        'ticket',
-        'usuariosSistemas',
-        'respuestas',
-        'estados'
-    ));
-}
-
-public function create()
-{
-    $roles = DB::table('roles')->get();
-
-    return view('tickets.create', compact('roles'));
-}
-
-public function getCategoriasPorArea($rol_id)
-{
-    return DB::table('categorias_ticket')
-        ->where('rol_destino_id', $rol_id)
-        ->select('id', 'nombre')
-        ->get();
-}
-
-public function getSubcategorias($categoria_id)
-{
-    return DB::table('subcategorias_ticket')
-        ->where('categoria_id', $categoria_id)
-        ->select('id', 'nombre')
-        ->get();
-}
-
-public function store(Request $request)
-{
-    $request->validate([
-        'rol_destino_id' => 'required|exists:roles,id',
-        'categoria_id'   => 'required|exists:categorias_ticket,id',
-        'titulo'         => 'required|string|max:255',
-        'descripcion'    => 'required|string',
-    ]);
-
-    $usuario = DB::table('usuarios')
-        ->where('id', session('usuario_id'))
-        ->first();
-
-    // 💡 GENERACIÓN DE FOLIO CONSECUTIVO POR ÁREA
-    $rolDestino = DB::table('roles')->where('id', $request->rol_destino_id)->first();
-    $prefijo = ($rolDestino && !empty($rolDestino->prefijo_folio)) ? $rolDestino->prefijo_folio : 'TCK';
-
-    $maxConsecutivo = DB::table('tickets')
-        ->where('rol_destino_id', $request->rol_destino_id)
-        ->max('consecutivo_area');
-
-    $consecutivoArea = ($maxConsecutivo ?? 0) + 1;
-    $folioGenerado = $prefijo . '-' . str_pad($consecutivoArea, 5, '0', STR_PAD_LEFT);
-
-    $ticketId = DB::table('tickets')->insertGetId([
-
-        'folio'            => $folioGenerado,
-        'consecutivo_area' => $consecutivoArea,
-        'titulo'           => $request->titulo,
-        'descripcion'      => $request->descripcion,
-        'categoria_id'     => $request->categoria_id,
-        'subcategoria_id'  => $request->subcategoria_id,
-        'rol_destino_id'   => $request->rol_destino_id,
-        'rol_origen_id'    => session('rol_id'),
-        'estado_ticket_id' => 1,
-        'unidad_id'        => $usuario->unidad_id ?? null,
-        'usuario_id'       => session('usuario_id'),
-        'fecha_creacion'   => now(),
-        'asignado_a'       => null,
-
-    ]);
-
-    // 🔔 NOTIFICACIÓN ÁREA DESTINO
-    $usuariosDestino = DB::table('usuarios')
-        ->where('rol_id', $request->rol_destino_id)
-        ->get();
-
-    foreach ($usuariosDestino as $u) {
-
-        DB::table('notificaciones')->insert([
-            'usuario_id' => $u->id,
-            'titulo'     => '🎫 Nuevo ticket',
-            'mensaje'    => 'Se creó el ticket ('.$folioGenerado.'): '.$request->titulo,
-            'leida'      => 0,
-            'created_at' => now()
-        ]);
-    }
-
-    return redirect('/tickets')
-        ->with('success', 'Ticket creado correctamente con folio: ' . $folioGenerado);
-}
-
-public function asignar(Request $request, $id)
-{
-    $ticket = DB::table('tickets')->where('id', $id)->first();
-
-    if (!$ticket) abort(404);
-
-    $request->validate([
-        'asignado_a' => 'required|exists:usuarios,id'
-    ]);
-
-    DB::table('tickets')
-        ->where('id', $id)
-        ->update([
-            'asignado_a' => $request->asignado_a
+    public function store(Request $request)
+    {
+        $request->validate([
+            'rol_destino_id' => 'required|exists:roles,id',
+            'categoria_id'   => 'required|exists:categorias_ticket,id',
+            'titulo'         => 'required|string|max:255',
+            'descripcion'    => 'required|string',
         ]);
 
-    DB::table('notificaciones')->insert([
-        'usuario_id' => $request->asignado_a,
-        'titulo'     => '📌 Ticket asignado',
-        'mensaje'    => 'Se te asignó el ticket: '.($ticket->folio ?? '#'.$ticket->id).' - '.$ticket->titulo,
-        'leida'      => 0,
-        'created_at' => now()
-    ]);
+        $usuario = DB::table('usuarios')
+            ->where('id', session('usuario_id'))
+            ->first();
 
-    return redirect('/tickets')
-        ->with('success', 'Asignado correctamente');
-}
+        // ==========================================
+        // GENERACIÓN DE FOLIO CONSECUTIVO POR ÁREA
+        // ==========================================
+        $rolDestino = DB::table('roles')
+            ->where('id', $request->rol_destino_id)
+            ->first();
 
-public function responder(Request $request, $id)
-{
-    $ticket = DB::table('tickets')->where('id', $id)->first();
+        $prefijo = (
+            $rolDestino &&
+            !empty($rolDestino->prefijo_folio)
+        )
+            ? $rolDestino->prefijo_folio
+            : 'TCK';
 
-    if (!$ticket) {
-        abort(404);
+        $maxConsecutivo = DB::table('tickets')
+            ->where('rol_destino_id', $request->rol_destino_id)
+            ->max('consecutivo_area');
+
+        $consecutivoArea = ($maxConsecutivo ?? 0) + 1;
+
+        $folioGenerado =
+            $prefijo . '-' .
+            str_pad(
+                $consecutivoArea,
+                5,
+                '0',
+                STR_PAD_LEFT
+            );
+
+        DB::table('tickets')->insertGetId([
+
+            'folio'            => $folioGenerado,
+            'consecutivo_area' => $consecutivoArea,
+            'titulo'           => $request->titulo,
+            'descripcion'      => $request->descripcion,
+            'categoria_id'     => $request->categoria_id,
+            'subcategoria_id'  => $request->subcategoria_id,
+            'rol_destino_id'   => $request->rol_destino_id,
+            'rol_origen_id'    => session('rol_id'),
+            'estado_ticket_id' => 1,
+            'unidad_id'        => $usuario->unidad_id ?? null,
+            'usuario_id'       => session('usuario_id'),
+            'fecha_creacion'   => now(),
+            'asignado_a'       => null,
+
+        ]);
+
+        // ==========================================
+        // NOTIFICACIÓN AL ÁREA DESTINO
+        // ==========================================
+        $usuariosDestino = DB::table('usuarios')
+            ->where('rol_id', $request->rol_destino_id)
+            ->get();
+
+        foreach ($usuariosDestino as $u) {
+
+            DB::table('notificaciones')->insert([
+                'usuario_id' => $u->id,
+                'titulo'     => '🎫 Nuevo ticket',
+                'mensaje'    => 'Se creó el ticket (' . $folioGenerado . '): ' . $request->titulo,
+                'leida'      => 0,
+                'created_at' => now()
+            ]);
+        }
+
+        return redirect('/tickets')
+            ->with(
+                'success',
+                'Ticket creado correctamente con folio: ' . $folioGenerado
+            );
     }
 
-    // ==========================
-    // VALIDACIÓN
-    // ==========================
-    $request->validate([
-        'mensaje' => 'required|string',
-        'estado_ticket_id' => 'required|exists:estados_ticket,id',
-    ]);
 
-    // ==========================
-    // GUARDAR RESPUESTA
-    // ==========================
-    DB::table('respuestas_ticket')->insert([
-        'ticket_id'  => $id,
-        'usuario_id' => session('usuario_id'),
-        'mensaje'    => $request->mensaje,
-        'fecha'      => now(),
-        'estado'     => 'activo'
-    ]);
+    public function asignar(Request $request, $id)
+    {
+        $ticket = DB::table('tickets')
+            ->where('id', $id)
+            ->first();
 
-    // ==========================
-    // DATOS A ACTUALIZAR
-    // ==========================
-    $update = [
-        'estado_ticket_id' => $request->estado_ticket_id
-    ];
+        if (!$ticket) {
+            abort(404);
+        }
 
-    // ==========================
-    // ASIGNACIÓN
-    // ==========================
-    if ($request->filled('asignado_a')) {
+        $request->validate([
+            'asignado_a' => 'required|exists:usuarios,id'
+        ]);
 
-        $update['asignado_a'] = $request->asignado_a;
+        DB::table('tickets')
+            ->where('id', $id)
+            ->update([
+                'asignado_a' => $request->asignado_a
+            ]);
 
         DB::table('notificaciones')->insert([
             'usuario_id' => $request->asignado_a,
             'titulo'     => '📌 Ticket asignado',
-            'mensaje'    => 'Se te asignó el ticket '.($ticket->folio ?? '#'.$ticket->id),
+            'mensaje'     => 'Se te asignó el ticket: ' .
+                ($ticket->folio ?? '#' . $ticket->id) .
+                ' - ' . $ticket->titulo,
             'leida'      => 0,
             'created_at' => now()
         ]);
+
+        return redirect('/tickets')
+            ->with('success', 'Asignado correctamente');
     }
 
-    // ==========================
-    // PRIORIDAD
-    // ==========================
-    if ($request->filled('prioridad')) {
 
-        $update['prioridad'] = $request->prioridad;
+    public function responder(Request $request, $id)
+    {
+        $ticket = DB::table('tickets')
+            ->where('id', $id)
+            ->first();
 
-        switch ($request->prioridad) {
-
-            case 'critico':
-                $horas = 24;
-                break;
-
-            case 'alto':
-                $horas = 72;
-                break;
-
-            case 'medio':
-                $horas = 168;
-                break;
-
-            default:
-                $horas = 336;
-                break;
+        if (!$ticket) {
+            abort(404);
         }
 
-        $update['sla_horas'] = $horas;
-        $update['fecha_limite'] = now()->addHours($horas);
-    }
+        // ==========================================
+        // SEGURIDAD:
+        // SOLICITANTES NO PUEDEN GESTIONAR TICKETS
+        // ==========================================
+        if (session('tipo_acceso') === 'solicitante') {
+            abort(403);
+        }
 
-    // ==========================
-    // CIERRE
-    // ==========================
-    $estado = DB::table('estados_ticket')
-        ->where('id', $request->estado_ticket_id)
-        ->first();
-
-    if ($estado && $estado->nombre === 'Cerrado') {
-
-        $update['fecha_cierre'] = now();
-        $update['cerrado_por'] = session('usuario_id');
-    }
-
-    // ==========================
-    // ACTUALIZAR TICKET
-    // ==========================
-    DB::table('tickets')
-        ->where('id', $id)
-        ->update($update);
-
-    // ==========================
-    // NOTIFICAR CREADOR
-    // ==========================
-    if ($ticket->usuario_id != session('usuario_id')) {
-
-        DB::table('notificaciones')->insert([
-            'usuario_id' => $ticket->usuario_id,
-            'titulo'     => '💬 Nueva respuesta',
-            'mensaje'    => 'Respondieron tu ticket: '.$ticket->titulo,
-            'leida'      => 0,
-            'created_at' => now()
+        $request->validate([
+            'mensaje'            => 'required|string',
+            'estado_ticket_id'   => 'required|exists:estados_ticket,id',
         ]);
+
+        // ==========================================
+        // GUARDAR RESPUESTA
+        // ==========================================
+        DB::table('respuestas_ticket')->insert([
+            'ticket_id'  => $id,
+            'usuario_id' => session('usuario_id'),
+            'mensaje'    => $request->mensaje,
+            'fecha'      => now(),
+            'estado'     => 'activo'
+        ]);
+
+        $update = [
+            'estado_ticket_id' => $request->estado_ticket_id
+        ];
+
+        // ==========================================
+        // ASIGNACIÓN
+        // ==========================================
+        if ($request->filled('asignado_a')) {
+
+            $update['asignado_a'] = $request->asignado_a;
+
+            DB::table('notificaciones')->insert([
+                'usuario_id' => $request->asignado_a,
+                'titulo'     => '📌 Ticket asignado',
+                'mensaje'    => 'Se te asignó el ticket ' .
+                    ($ticket->folio ?? '#' . $ticket->id),
+                'leida'      => 0,
+                'created_at' => now()
+            ]);
+        }
+
+        // ==========================================
+        // PRIORIDAD Y SLA
+        // ==========================================
+        if ($request->filled('prioridad')) {
+
+            $update['prioridad'] = $request->prioridad;
+
+            switch ($request->prioridad) {
+
+                case 'critico':
+                    $horas = 24;
+                    break;
+
+                case 'alto':
+                    $horas = 72;
+                    break;
+
+                case 'medio':
+                    $horas = 168;
+                    break;
+
+                default:
+                    $horas = 336;
+                    break;
+            }
+
+            $update['sla_horas'] = $horas;
+            $update['fecha_limite'] = now()->addHours($horas);
+        }
+
+        // ==========================================
+        // CIERRE DEL TICKET
+        // ==========================================
+        $estado = DB::table('estados_ticket')
+            ->where('id', $request->estado_ticket_id)
+            ->first();
+
+        if ($estado && $estado->nombre === 'Cerrado') {
+
+            $update['fecha_cierre'] = now();
+            $update['cerrado_por'] = session('usuario_id');
+        }
+
+        // ==========================================
+        // ACTUALIZAR TICKET
+        // ==========================================
+        DB::table('tickets')
+            ->where('id', $id)
+            ->update($update);
+
+        // ==========================================
+        // NOTIFICAR AL CREADOR
+        // ==========================================
+        if ($ticket->usuario_id != session('usuario_id')) {
+
+            DB::table('notificaciones')->insert([
+                'usuario_id' => $ticket->usuario_id,
+                'titulo'     => '💬 Nueva respuesta',
+                'mensaje'    => 'Respondieron tu ticket: ' . $ticket->titulo,
+                'leida'      => 0,
+                'created_at' => now()
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            'Ticket actualizado correctamente'
+        );
     }
 
-    return back()->with('success', 'Ticket actualizado correctamente');
-}
 
-public function ticketsEntreAreas()
-{
-    $usuarioRol = session('rol_id');
+    public function ticketsEntreAreas()
+    {
+        $usuarioRol = session('rol_id');
 
-    $tickets = DB::table('tickets as t')
+        $tickets = DB::table('tickets as t')
 
-        ->join('roles as r1', 't.rol_origen_id', '=', 'r1.id')
-        ->join('roles as r2', 't.rol_destino_id', '=', 'r2.id')
+            ->join('roles as r1', 't.rol_origen_id', '=', 'r1.id')
+            ->join('roles as r2', 't.rol_destino_id', '=', 'r2.id')
 
-        ->leftJoin('estados_ticket as e', 't.estado_ticket_id', '=', 'e.id')
+            ->leftJoin(
+                'estados_ticket as e',
+                't.estado_ticket_id',
+                '=',
+                'e.id'
+            )
 
-        ->select(
-            't.*',
-            'r1.nombre as area_origen',
-            'r2.nombre as area_destino',
-            DB::raw("COALESCE(e.nombre, 'Abierto') as estado")
-        )
+            ->select(
+                't.*',
+                'r1.nombre as area_origen',
+                'r2.nombre as area_destino',
+                DB::raw("COALESCE(e.nombre, 'Abierto') as estado")
+            )
 
-        ->where('t.rol_origen_id', $usuarioRol)
-        ->whereColumn('t.rol_origen_id', '!=', 't.rol_destino_id')
+            ->where('t.rol_origen_id', $usuarioRol)
+            ->whereColumn(
+                't.rol_origen_id',
+                '!=',
+                't.rol_destino_id'
+            )
 
-        ->get();
+            ->get();
 
-    return view('tickets.entre_areas', compact('tickets'));
-}
+        return view(
+            'tickets.entre_areas',
+            compact('tickets')
+        );
+    }
 
-public function cerrar($id)
-{
-    abort(404);
-}
 
-public function exportar(Request $request)
-{
-    if (session('rol') !== 'Admin') abort(403);
+    public function cerrar($id)
+    {
+        abort(404);
+    }
 
-    return Excel::download(
 
-        new TicketsExport(
-            $request->fecha_inicio,
-            $request->fecha_fin,
-            $request->area_id
-        ),
+    public function exportar(Request $request)
+    {
+        if (session('tipo_acceso') !== 'admin') {
+            abort(403);
+        }
 
-        'reporte_tickets.xlsx'
-    );
-}
+        return Excel::download(
 
+            new TicketsExport(
+                $request->fecha_inicio,
+                $request->fecha_fin,
+                $request->area_id
+            ),
+
+            'reporte_tickets.xlsx'
+        );
+    }
 }

@@ -16,7 +16,7 @@ class AuthController extends Controller
             'contrasena' => 'required'
         ]);
 
-        // 2️⃣ Buscar usuario con su ROL (JOIN)
+        // 2️⃣ Buscar usuario con su ROL
         $usuario = DB::table('usuarios')
             ->join('roles', 'usuarios.rol_id', '=', 'roles.id')
             ->select(
@@ -24,9 +24,10 @@ class AuthController extends Controller
                 'usuarios.nombre',
                 'usuarios.contrasena',
                 'usuarios.estado',
-                'usuarios.rol_id',            // ✅ NECESARIO
+                'usuarios.rol_id',
                 'usuarios.es_jefe',
-                'roles.nombre as rol'
+                'roles.nombre as rol',
+                'roles.tipo_acceso'
             )
             ->where('usuarios.correo', $request->correo)
             ->first();
@@ -46,16 +47,20 @@ class AuthController extends Controller
             return back()->with('error', 'Usuario inactivo');
         }
 
-        // 🔥 LIMPIAR SESIÓN ANTERIOR (IMPORTANTE)
+        // 🔥 LIMPIAR SESIÓN ANTERIOR
         session()->flush();
 
-        // 6️⃣ Crear sesión (AQUÍ ESTABA EL ERROR)
+        // 6️⃣ Crear sesión
         session([
-            'usuario_id' => $usuario->id,
-            'nombre'     => $usuario->nombre,
-            'rol'        => $usuario->rol,     // Admin | Sistemas | Unidad | MKT | etc
-            'rol_id'     => $usuario->rol_id,  // ✅ CLAVE PARA FILTRAR TICKETS
-            'es_jefe'    => $usuario->es_jefe,
+            'usuario_id'   => $usuario->id,
+            'nombre'       => $usuario->nombre,
+            'rol'          => $usuario->rol,
+            'rol_id'       => $usuario->rol_id,
+            'es_jefe'      => $usuario->es_jefe,
+
+            // ✅ NUEVO
+            // gestion | solicitante
+            'tipo_acceso'  => $usuario->tipo_acceso,
         ]);
 
         // 7️⃣ Redirigir

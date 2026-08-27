@@ -41,21 +41,27 @@ class RolController extends Controller
         $request->validate(
             [
                 'nombre' => 'required|unique:roles,nombre',
-                'prefijo_folio' => 'nullable|string|max:10'
+                'prefijo_folio' => 'nullable|string|max:10',
+                'tipo_acceso' => 'required|in:gestion,solicitante'
             ],
             [
-                'nombre.unique' => 'Este rol ya existe'
+                'nombre.unique' => 'Este rol ya existe',
+                'tipo_acceso.required' => 'Seleccione el tipo de acceso'
             ]
         );
 
-        // Limpia el texto, lo convierte a mayúsculas o guarda NULL si viene vacío
-        $prefijo = $request->filled('prefijo_folio') 
-            ? strtoupper(trim($request->prefijo_folio)) 
+        // ===============================
+        // PREFIJO
+        // NO MODIFICAMOS TU LÓGICA
+        // ===============================
+        $prefijo = $request->filled('prefijo_folio')
+            ? strtoupper(trim($request->prefijo_folio))
             : null;
 
         DB::table('roles')->insert([
             'nombre' => $request->nombre,
             'prefijo_folio' => $prefijo,
+            'tipo_acceso' => $request->tipo_acceso,
         ]);
 
         return redirect('/admin/roles')
@@ -69,7 +75,9 @@ class RolController extends Controller
     {
         if (session('rol') !== 'Admin') abort(403);
 
-        $rol = DB::table('roles')->where('id', $id)->first();
+        $rol = DB::table('roles')
+            ->where('id', $id)
+            ->first();
 
         if (!$rol) {
             abort(404);
@@ -85,14 +93,26 @@ class RolController extends Controller
     {
         if (session('rol') !== 'Admin') abort(403);
 
+        $rol = DB::table('roles')
+            ->where('id', $id)
+            ->first();
+
+        if (!$rol) {
+            abort(404);
+        }
+
         $request->validate([
             'nombre' => 'required|string|max:255|unique:roles,nombre,' . $id,
-            'prefijo_folio' => 'nullable|string|max:10'
+            'prefijo_folio' => 'nullable|string|max:10',
+            'tipo_acceso' => 'required|in:admin,gestion,solicitante'
         ]);
 
-        // Limpia el texto, lo convierte a mayúsculas o guarda NULL si viene vacío
-        $prefijo = $request->filled('prefijo_folio') 
-            ? strtoupper(trim($request->prefijo_folio)) 
+        // ===============================
+        // PREFIJO
+        // NO MODIFICAMOS TU LÓGICA
+        // ===============================
+        $prefijo = $request->filled('prefijo_folio')
+            ? strtoupper(trim($request->prefijo_folio))
             : null;
 
         DB::table('roles')
@@ -100,6 +120,7 @@ class RolController extends Controller
             ->update([
                 'nombre' => $request->nombre,
                 'prefijo_folio' => $prefijo,
+                'tipo_acceso' => $request->tipo_acceso,
             ]);
 
         return redirect('/admin/roles')
