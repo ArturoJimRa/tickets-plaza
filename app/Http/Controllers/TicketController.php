@@ -202,13 +202,15 @@ class TicketController extends Controller
             ->leftJoin('estados_ticket', 'tickets.estado_ticket_id', '=', 'estados_ticket.id')
             ->leftJoin('usuarios as asignado', 'tickets.asignado_a', '=', 'asignado.id')
             ->leftJoin('usuarios as cerrado', 'tickets.cerrado_por', '=', 'cerrado.id')
-            ->leftJoin('roles', 'tickets.rol_destino_id', '=', 'roles.id')
+            ->leftJoin('roles as rol_destino', 'tickets.rol_destino_id', '=', 'rol_destino.id')
+            ->leftJoin('roles as rol_origen', 'tickets.rol_origen_id', '=', 'rol_origen.id')
 
             ->select(
                 'tickets.*',
                 'usuarios.nombre as creador',
                 'unidades.nombre as unidad',
-                'roles.nombre as area',
+                'rol_destino.nombre as area',
+                DB::raw("CASE WHEN tickets.rol_origen_id = 2 THEN NULL ELSE rol_origen.nombre END as area_origen"),
                 'categorias_ticket.nombre as categoria',
                 'subcategorias_ticket.nombre as subcategoria',
                 DB::raw("COALESCE(estados_ticket.nombre, 'Abierto') as estado"),
@@ -401,7 +403,7 @@ class TicketController extends Controller
         DB::table('notificaciones')->insert([
             'usuario_id' => $request->asignado_a,
             'titulo'     => '📌 Ticket asignado',
-            'mensaje'     => 'Se te asignó el ticket: ' .
+            'mensaje'    => 'Se te asignó el ticket: ' .
                 ($ticket->folio ?? '#' . $ticket->id) .
                 ' - ' . $ticket->titulo,
             'leida'      => 0,
@@ -461,7 +463,7 @@ class TicketController extends Controller
             DB::table('notificaciones')->insert([
                 'usuario_id' => $request->asignado_a,
                 'titulo'     => '📌 Ticket asignado',
-                'mensaje'    => 'Se te asignó el ticket ' .
+                'mensaje'     => 'Se te asignó el ticket ' .
                     ($ticket->folio ?? '#' . $ticket->id),
                 'leida'      => 0,
                 'created_at' => now()

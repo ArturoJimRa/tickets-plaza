@@ -100,6 +100,17 @@
             </div>
             @endif
 
+            {{-- ==========================================
+               ÁREA QUE SOLICITA
+               NO SE MUESTRA SI EL ORIGEN ES UNIDAD
+            =========================================== --}}
+            @if($ticket->area_origen)
+            <div class="col-md-4">
+                <strong>Área que solicita:</strong>
+                {{ $ticket->area_origen }}
+            </div>
+            @endif
+
         </div>
 
         <hr>
