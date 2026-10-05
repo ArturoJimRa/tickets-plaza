@@ -214,6 +214,9 @@ Route::post('/tickets/{id}/asignar', [TicketController::class, 'asignar'])
 Route::post('/tickets/{id}/cerrar', [TicketController::class, 'cerrar'])
     ->middleware(['authcheck']);
 
+Route::post('/tickets/{id}/reabrir', [TicketController::class, 'reabrir'])
+    ->name('tickets.reabrir');
+
 
 /*
 |-------------------------------------------------------------------------- 

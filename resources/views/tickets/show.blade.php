@@ -111,6 +111,16 @@
             </div>
             @endif
 
+            {{-- ==========================================
+               ÁREA DESTINO
+            =========================================== --}}
+            @if($ticket->area)
+            <div class="col-md-4">
+                <strong>Área destino:</strong>
+                {{ $ticket->area }}
+            </div>
+            @endif
+
         </div>
 
         <hr>
@@ -222,6 +232,64 @@
     </div>
 
 </div>
+
+{{-- =========================================================
+   REABRIR TICKET
+   ADMIN PUEDE REABRIR CUALQUIER TICKET
+   JEFE SOLO PUEDE REABRIR TICKETS DE SU ÁREA
+========================================================= --}}
+@if(
+    $ticket->estado === 'Cerrado'
+    &&
+    (
+        session('rol') === 'Admin'
+        ||
+        (
+            session('es_jefe')
+            &&
+            session('rol_id') == $ticket->rol_destino_id
+        )
+    )
+)
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-header bg-warning text-dark">
+        Ticket cerrado
+    </div>
+
+    <div class="card-body">
+
+        <form method="POST" action="{{ route('tickets.reabrir', $ticket->id) }}">
+            @csrf
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+                    <strong>Este ticket está cerrado.</strong>
+
+                    <div class="text-muted small">
+                        Puedes reabrirlo para continuar con su gestión.
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-warning">
+
+                    🔄 Reabrir ticket
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+@endif
 
 {{-- =========================================================
    FORMULARIO ÚNICO DE GESTIÓN

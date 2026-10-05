@@ -585,6 +585,49 @@ class TicketController extends Controller
         abort(404);
     }
 
+    public function reabrir($id)
+{
+    $ticket = DB::table('tickets')
+        ->where('id', $id)
+        ->first();
+
+    if (!$ticket) {
+        abort(404);
+    }
+
+    // Solo Administrador o Jefe del área destino
+    $puedeReabrir =
+        session('rol') === 'Admin'
+        ||
+        (
+            session('es_jefe')
+            && session('rol_id') == $ticket->rol_destino_id
+        );
+
+    if (!$puedeReabrir) {
+        abort(403);
+    }
+
+    // Buscar el estado "Abierto"
+    $estadoAbierto = DB::table('estados_ticket')
+        ->where('nombre', 'Abierto')
+        ->first();
+
+    if (!$estadoAbierto) {
+        return back()->with('error', 'No se encontró el estado Abierto.');
+    }
+
+    DB::table('tickets')
+        ->where('id', $id)
+        ->update([
+            'estado_ticket_id' => $estadoAbierto->id,
+        ]);
+
+    return redirect()
+        ->route('tickets.show', $id)
+        ->with('success', 'El ticket fue reabierto correctamente.');
+}
+
 
     public function exportar(Request $request)
     {
