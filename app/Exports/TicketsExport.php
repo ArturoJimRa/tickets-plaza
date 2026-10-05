@@ -51,12 +51,12 @@ class TicketsExport implements FromCollection, WithHeadings
         */
         if ($this->fecha_inicio) {
             $inicio = Carbon::parse($this->fecha_inicio)->startOfDay(); // 00:00:00
-            $query->where('tickets.fecha_creacion', '>=', $inicio);
+            $query->where('tickets.fecha_cierre', '>=', $inicio);
         }
 
         if ($this->fecha_fin) {
             $fin = Carbon::parse($this->fecha_fin)->endOfDay(); // 23:59:59
-            $query->where('tickets.fecha_creacion', '<=', $fin);
+            $query->where('tickets.fecha_cierre', '<=', $fin);
         }
 
         /*

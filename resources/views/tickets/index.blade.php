@@ -111,7 +111,8 @@
                     <th>Estado</th>
                     <th>Prioridad</th>
                     <th>Tiempo restante</th>
-                    <th>Fecha</th>
+                    <th>Fecha creación</th>
+                    <th>Fecha cierre</th>
                     <th class="text-end">Acción</th>
                 </tr>
             </thead>
@@ -241,9 +242,18 @@
                             @endif
                         </td>
 
-                        {{-- FECHA --}}
+                        {{-- FECHA CREACIÓN --}}
                         <td>
-                            {{ \Carbon\Carbon::parse($ticket->fecha_creacion)->format('d/m/Y') }}
+                            {{ \Carbon\Carbon::parse($ticket->fecha_creacion)->format('d/m/Y H:i') }}
+                        </td>
+
+                        {{-- FECHA CIERRE --}}
+                        <td>
+                            @if($ticket->fecha_cierre)
+                                {{ \Carbon\Carbon::parse($ticket->fecha_cierre)->format('d/m/Y H:i') }}
+                            @else
+                                <span class="text-muted">Sin cierre</span>
+                            @endif
                         </td>
 
                         <td class="text-end">
@@ -255,7 +265,7 @@
 
                 @empty
                     <tr>
-                        <td colspan="11" class="text-center py-4 text-muted">
+                        <td colspan="12" class="text-center py-4 text-muted">
                             No hay tickets registrados
                         </td>
                     </tr>
