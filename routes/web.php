@@ -138,7 +138,7 @@ Route::middleware(['web'])->group(function () {
         ->middleware(['authcheck', 'role:Admin'])
         ->name('marcas.edit');
 
-    Route::put('/admin/marcas/{marca}', [MarcaController::class, 'update'])
+    Route::put('/admin/marcas/{marca}', [UnidadController::class, 'update'])
         ->middleware(['authcheck', 'role:Admin'])
         ->name('marcas.update');
 
@@ -200,7 +200,8 @@ Route::get('/tickets/entre-areas', [TicketController::class, 'ticketsEntreAreas'
     ->middleware('authcheck');
 
 Route::get('/tickets/{id}', [TicketController::class, 'show'])
-    ->middleware('authcheck');
+    ->middleware('authcheck')
+    ->name('tickets.show');
 
 Route::get('/mis-tickets', [TicketController::class, 'misTickets'])
     ->middleware('authcheck');
